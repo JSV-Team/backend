@@ -1,0 +1,20 @@
+# Dependencies
+node_modules/
+
+# Uploads
+uploads/
+
+# Environment files
+.env
+.env.local
+
+*.log
+dist
+
+# IDE
+.idea/
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
