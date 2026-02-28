@@ -4,9 +4,9 @@ const postService = require('../services/post.service');
 const createPost = asyncHandler(async (req, res) => {
   console.log('[POST CONTROLLER] ===== STARTING =====');
   const { content, imageUrl, description, location, maxParticipants, duration, title } = req.body;
-  
+
   console.log('[POST CONTROLLER] Received:', { content, title, description });
-  
+
   // Get userId from request - use userId=2 for testing (temporary login)
   const userId = req.body.userId || 2;
 
@@ -26,6 +26,11 @@ const createPost = asyncHandler(async (req, res) => {
     res.status(201).json(result);
   } catch (error) {
     console.error('[POST CONTROLLER] Error:', error.message, error.stack);
+
+    if (error.message === 'Vi phạm từ ngữ đăng bài') {
+      return res.status(400).json({ message: error.message });
+    }
+
     res.status(500).json({
       message: 'Failed: ' + error.message
     });

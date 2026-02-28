@@ -1,13 +1,4 @@
 const activityModel = require('../models/activity.model');
-const notificationService = require('./notification.service');
-
-const getPendingActivities = async (userId) => {
-    return await activityModel.getPendingActivities(userId);
-};
-
-const deleteActivityRequest = async (requestId) => {
-    await activityModel.deleteActivityRequest(requestId);
-};
 
 const getApprovedActivities = async () => {
     return await activityModel.getApprovedActivities();
@@ -38,15 +29,11 @@ const joinActivity = async (activityId, userId) => {
 
     const requestId = await activityModel.createActivityRequest(activityId, userId);
 
-    const content = `${requesterName} muốn tham gia hoạt động "${activity.title}" của bạn`;
-    await notificationService.createNotification(activity.creator_id, 'activity_request', content, requestId);
-
+    // Notifications removed
     return requestId;
 };
 
 module.exports = {
-    getPendingActivities,
-    deleteActivityRequest,
     getApprovedActivities,
     joinActivity
 };
