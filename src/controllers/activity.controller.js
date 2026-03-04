@@ -53,9 +53,21 @@ const joinActivity = asyncHandler(async (req, res) => {
     }
 });
 
+const approveActivityRequest = asyncHandler(async (req, res) => {
+    try {
+        const requestId = parseInt(req.params.id);
+        const data = await activityService.approveActivityRequest(requestId);
+        res.json({ message: 'Đã duyệt yêu cầu và thêm vào nhóm chat thành công!', data });
+    } catch (error) {
+        console.error('Lỗi khi duyệt yêu cầu:', error);
+        res.status(500).json({ message: error.message || 'Lỗi Server' });
+    }
+});
+
 module.exports = {
     getPendingActivities,
     deleteActivityRequest,
     getActivities,
-    joinActivity
+    joinActivity,
+    approveActivityRequest
 };

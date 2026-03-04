@@ -13,6 +13,11 @@ router.get('/pending-activities', activityController.getPendingActivities);
 router.delete('/pending-activities/:id', activityController.deleteActivityRequest);
 
 // =============================================
+// PATCH /api/pending-activities/:id/approve
+// =============================================
+router.patch('/pending-activities/:id/approve', activityController.approveActivityRequest);
+
+// =============================================
 // GET /api/activities
 // =============================================
 router.get('/activities', activityController.getActivities);

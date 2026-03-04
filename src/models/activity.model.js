@@ -96,6 +96,19 @@ const createActivityRequest = async (activityId, userId) => {
   return result.recordset[0].request_id;
 };
 
+const approveActivityRequest = async (requestId) => {
+  const pool = getPool();
+  const result = await pool.request()
+    .input('id', sql.Int, requestId)
+    .query(`
+      UPDATE ActivityRequests 
+      SET status = 'accepted' 
+      OUTPUT INSERTED.activity_id, INSERTED.requester_id
+      WHERE request_id = @id AND status = 'pending'
+    `);
+  return result.recordset[0];
+};
+
 module.exports = {
   getPendingActivities,
   deleteActivityRequest,
@@ -103,5 +116,6 @@ module.exports = {
   getActivityById,
   checkActivityRequestExists,
   getUserInfo,
-  createActivityRequest
+  createActivityRequest,
+  approveActivityRequest
 };
