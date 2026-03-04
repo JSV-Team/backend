@@ -3,7 +3,9 @@ const notificationService = require('../services/notification.service');
 
 const getNotifications = asyncHandler(async (req, res) => {
     const userId = req.query.userId || 2; // Default to userId = 2 for testing
+    console.log(`👁 GET /api/notifications?userId=${userId}`);
     const notifications = await notificationService.getNotificationsByUserId(userId);
+    console.log(`✅ Returning ${notifications.length} notifications for user ${userId}`);
     res.json(notifications);
 });
 
