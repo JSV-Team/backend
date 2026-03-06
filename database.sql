@@ -200,7 +200,7 @@ GO
 CREATE TABLE Conversations (
     conversation_id   INT          IDENTITY(1,1) PRIMARY KEY,
 
-    -- direct | group | activity
+    -- direct | group | activity | private
     conversation_type NVARCHAR(20) NOT NULL,
 
     -- temporary | permanent
@@ -211,7 +211,7 @@ CREATE TABLE Conversations (
     created_at        DATETIME2    NOT NULL CONSTRAINT DF_Conv_CreatedAt DEFAULT SYSDATETIME(),
 
     CONSTRAINT FK_Conversations_Activity FOREIGN KEY (activity_id) REFERENCES Activities(activity_id) ON DELETE SET NULL,
-    CONSTRAINT CHK_Conversation_Type     CHECK (conversation_type IN ('direct', 'group', 'activity')),
+    CONSTRAINT CHK_Conversation_Type     CHECK (conversation_type IN ('direct', 'group', 'activity', 'private')),
     CONSTRAINT CHK_Group_Lifetime        CHECK (group_lifetime     IN ('temporary', 'permanent'))
 );
 GO
