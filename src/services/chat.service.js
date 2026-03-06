@@ -65,6 +65,23 @@ const initOrJoinActivityChat = async (activityId, hostId, memberId) => {
     // Có thể tự động bắn tin "memberId đã join"...
 };
 
+const getOrInitPrivateConversation = async (user1, user2) => {
+    if (user1 === user2) throw new Error('Không thể tự chat với chính mình');
+    let conv = await chatModel.getPrivateConversation(user1, user2);
+
+    if (!conv) {
+        const convId = await chatModel.createConversation('private', null);
+        await chatModel.addMember(convId, user1, 'member');
+        await chatModel.addMember(convId, user2, 'member');
+        conv = { conversation_id: convId };
+    } else {
+        // Đảm bảo cả hai user đều ở trong phòng (reset left_at nếu từng rời đi)
+        await chatModel.addMember(conv.conversation_id, user1, 'member');
+        await chatModel.addMember(conv.conversation_id, user2, 'member');
+    }
+    return conv;
+};
+
 const getConversationMembers = async (conversationId) => {
     return await chatModel.getConversationMembers(conversationId);
 };
@@ -75,5 +92,6 @@ module.exports = {
     saveMessage,
     leaveConversation,
     initOrJoinActivityChat,
-    getConversationMembers
+    getConversationMembers,
+    getOrInitPrivateConversation
 };
