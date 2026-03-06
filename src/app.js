@@ -30,7 +30,7 @@ app.use('/api', routes);
 
 // Root route
 app.get('/', (req, res) => {
-  res.json({ message: 'Welcome to JSV API', version: '1.0.0', endpoints: { users: '/api/users', friends: '/api/friends', match: '/api/match', health: '/health' } });
+  res.json({ message: 'Welcome to JSV API', version: '1.0.0', endpoints: { users: '/api/users', friends: '/api/friends', match: '/api/match', health: '/health', notifications:'/api/notifications' } });
 });
 
 // Health check

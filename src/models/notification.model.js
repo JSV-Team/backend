@@ -2,11 +2,12 @@ const { getPool } = require('../config/db');
 const sql = require('mssql');
 
 const getNotificationsByUserId = async (userId, limit = 50) => {
-    const pool = getPool();
-    const result = await pool.request()
-        .input('userId', sql.Int, userId)
-        .input('limit', sql.Int, limit)
-        .query(`
+    try {
+        const pool = getPool();
+        const result = await pool.request()
+            .input('userId', sql.Int, userId)
+            .input('limit', sql.Int, limit)
+            .query(`
       SELECT TOP (@limit)
         notification_id,
         user_id,
@@ -19,19 +20,31 @@ const getNotificationsByUserId = async (userId, limit = 50) => {
       WHERE user_id = @userId
       ORDER BY created_at DESC
     `);
-    return result.recordset;
+        console.log(`📬 getNotificationsByUserId for userId=${userId}: Found ${result.recordset.length} records`);
+        return result.recordset;
+    } catch (error) {
+        console.error('❌ Error in getNotificationsByUserId:', error.message);
+        throw error;
+    }
 };
 
 const getUnreadCount = async (userId) => {
-    const pool = getPool();
-    const result = await pool.request()
-        .input('userId', sql.Int, userId)
-        .query(`
+    try {
+        const pool = getPool();
+        const result = await pool.request()
+            .input('userId', sql.Int, userId)
+            .query(`
       SELECT COUNT(*) as count
       FROM Notifications
       WHERE user_id = @userId AND is_read = 0
     `);
-    return result.recordset[0].count;
+        const count = result.recordset && result.recordset.length > 0 ? result.recordset[0].count : 0;
+        console.log(`📬 getUnreadCount for userId=${userId}: ${count} unread`);
+        return count;
+    } catch (error) {
+        console.error('❌ Error in getUnreadCount:', error.message);
+        throw error;
+    }
 };
 
 const createNotification = async (userId, type, content, refId = null) => {
