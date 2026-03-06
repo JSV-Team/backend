@@ -6,5 +6,6 @@ router.get('/conversations', chatController.getConversations);
 router.get('/conversations/:conversationId/messages', chatController.getMessages);
 router.get('/conversations/:conversationId/members', chatController.getMembers);
 router.patch('/conversations/:conversationId/leave', chatController.leaveGroup);
+router.post('/private', chatController.getOrInitPrivateChat);
 
 module.exports = router;

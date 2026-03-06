@@ -16,11 +16,15 @@ const getMessages = async (conversationId, userId, page = 1, limit = 20) => {
 };
 
 // Socket calls this
-const saveMessage = async (conversationId, senderId, content) => {
-    if (!content || content.trim() === '') {
-        throw new Error('Tin nhắn rỗng');
+const saveMessage = async (conversationId, senderId, content, msgType = 'text', imageUrl = null) => {
+    // Cho phép ảnh không có text
+    if (msgType !== 'image') {
+        if (!content || content.trim() === '') {
+            throw new Error('Tin nhắn rỗng');
+        }
     }
-    if (content.length > 2000) {
+
+    if (content && content.length > 2000) {
         throw new Error('Tin nhắn quá dài (Tối đa 2000 ký tự)');
     }
 
@@ -30,10 +34,10 @@ const saveMessage = async (conversationId, senderId, content) => {
         throw new Error('Unauthorized');
     }
 
-    // 2. Chống XSS cơ bản
-    const safeContent = content.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    // 2. Chống XSS cơ bản (chỉ áp dụng nếu có content)
+    const safeContent = content ? content.replace(/</g, "&lt;").replace(/>/g, "&gt;") : '';
 
-    return await chatModel.saveMessage(conversationId, senderId, safeContent);
+    return await chatModel.saveMessage(conversationId, senderId, safeContent, msgType, imageUrl);
 };
 
 const leaveConversation = async (conversationId, userId) => {
@@ -65,6 +69,23 @@ const initOrJoinActivityChat = async (activityId, hostId, memberId) => {
     // Có thể tự động bắn tin "memberId đã join"...
 };
 
+const getOrInitPrivateConversation = async (user1, user2) => {
+    if (user1 === user2) throw new Error('Không thể tự chat với chính mình');
+    let conv = await chatModel.getPrivateConversation(user1, user2);
+
+    if (!conv) {
+        const convId = await chatModel.createConversation('private', null);
+        await chatModel.addMember(convId, user1, 'member');
+        await chatModel.addMember(convId, user2, 'member');
+        conv = { conversation_id: convId };
+    } else {
+        // Đảm bảo cả hai user đều ở trong phòng (reset left_at nếu từng rời đi)
+        await chatModel.addMember(conv.conversation_id, user1, 'member');
+        await chatModel.addMember(conv.conversation_id, user2, 'member');
+    }
+    return conv;
+};
+
 const getConversationMembers = async (conversationId) => {
     return await chatModel.getConversationMembers(conversationId);
 };
@@ -75,5 +96,6 @@ module.exports = {
     saveMessage,
     leaveConversation,
     initOrJoinActivityChat,
-    getConversationMembers
+    getConversationMembers,
+    getOrInitPrivateConversation
 };
