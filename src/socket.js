@@ -42,10 +42,10 @@ const setupSocket = (server) => {
         // Xử lý gửi tin nhắn
         socket.on('send_message', async (data, callback) => {
             try {
-                const { conversationId, content } = data;
+                const { conversationId, content, msgType, imageUrl } = data;
 
                 // 1. Lưu DB + Check member security
-                const savedMessage = await chatService.saveMessage(conversationId, socket.userId, content);
+                const savedMessage = await chatService.saveMessage(conversationId, socket.userId, content, msgType, imageUrl);
 
                 // 2. Broadcast cho mọi người trong room NHẬN tin mới
                 io.to(`room_${conversationId}`).emit('receive_message', savedMessage);

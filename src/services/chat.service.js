@@ -16,11 +16,15 @@ const getMessages = async (conversationId, userId, page = 1, limit = 20) => {
 };
 
 // Socket calls this
-const saveMessage = async (conversationId, senderId, content) => {
-    if (!content || content.trim() === '') {
-        throw new Error('Tin nhắn rỗng');
+const saveMessage = async (conversationId, senderId, content, msgType = 'text', imageUrl = null) => {
+    // Cho phép ảnh không có text
+    if (msgType !== 'image') {
+        if (!content || content.trim() === '') {
+            throw new Error('Tin nhắn rỗng');
+        }
     }
-    if (content.length > 2000) {
+
+    if (content && content.length > 2000) {
         throw new Error('Tin nhắn quá dài (Tối đa 2000 ký tự)');
     }
 
@@ -30,10 +34,10 @@ const saveMessage = async (conversationId, senderId, content) => {
         throw new Error('Unauthorized');
     }
 
-    // 2. Chống XSS cơ bản
-    const safeContent = content.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    // 2. Chống XSS cơ bản (chỉ áp dụng nếu có content)
+    const safeContent = content ? content.replace(/</g, "&lt;").replace(/>/g, "&gt;") : '';
 
-    return await chatModel.saveMessage(conversationId, senderId, safeContent);
+    return await chatModel.saveMessage(conversationId, senderId, safeContent, msgType, imageUrl);
 };
 
 const leaveConversation = async (conversationId, userId) => {

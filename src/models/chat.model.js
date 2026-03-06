@@ -62,19 +62,20 @@ const addMember = async (conversationId, userId, role = 'member') => {
 };
 
 // Lưu tin nhắn
-const saveMessage = async (conversationId, senderId, content, msgType = 'text') => {
+const saveMessage = async (conversationId, senderId, content, msgType = 'text', imageUrl = null) => {
     const pool = getPool();
     const result = await pool.request()
         .input('convId', sql.Int, conversationId)
         .input('senderId', sql.Int, senderId)
         .input('content', sql.NVarChar, content)
         .input('msgType', sql.NVarChar, msgType)
+        .input('imageUrl', sql.NVarChar, imageUrl)
         .query(`
-            INSERT INTO Messages (conversation_id, sender_id, content, msg_type, created_at)
-            VALUES (@convId, @senderId, @content, @msgType, SYSDATETIME());
+            INSERT INTO Messages (conversation_id, sender_id, content, msg_type, image_url, created_at)
+            VALUES (@convId, @senderId, @content, @msgType, @imageUrl, SYSDATETIME());
             
             SELECT 
-                m.message_id, m.conversation_id, m.sender_id, m.content, m.msg_type, m.created_at,
+                m.message_id, m.conversation_id, m.sender_id, m.content, m.msg_type, m.image_url, m.created_at,
                 u.full_name AS sender_name, u.avatar_url AS sender_avatar
             FROM Messages m
             JOIN Users u ON m.sender_id = u.user_id
@@ -101,7 +102,7 @@ const getUserConversations = async (userId) => {
                  END AS activity_title,
                  cm.role AS user_role,
                  (
-                    SELECT TOP 1 content 
+                    SELECT TOP 1 CASE WHEN msg_type = 'image' THEN '[Hình ảnh]' ELSE content END 
                     FROM Messages m 
                     WHERE m.conversation_id = c.conversation_id 
                     ORDER BY created_at DESC
@@ -130,7 +131,7 @@ const getMessages = async (conversationId, limit, offset) => {
         .input('limit', sql.Int, limit)
         .query(`
             SELECT 
-                m.message_id, m.conversation_id, m.sender_id, m.content, m.msg_type, m.created_at,
+                m.message_id, m.conversation_id, m.sender_id, m.content, m.msg_type, m.image_url, m.created_at,
                 u.full_name AS sender_name, u.avatar_url AS sender_avatar
             FROM Messages m
             JOIN Users u ON m.sender_id = u.user_id

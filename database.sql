@@ -237,6 +237,7 @@ CREATE TABLE Messages (
     conversation_id INT           NOT NULL,
     sender_id       INT           NOT NULL,
     content         NVARCHAR(MAX) NULL,
+    image_url       NVARCHAR(500) NULL,
     -- msg_type = 'image'  → content = image_url
     -- msg_type = 'system' → content = nội dung hệ thống tự sinh
 
