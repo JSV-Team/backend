@@ -102,7 +102,11 @@ const getUserConversations = async (userId) => {
                  END AS activity_title,
                  cm.role AS user_role,
                  (
+<<<<<<< Updated upstream
                     SELECT TOP 1 CASE WHEN msg_type = 'image' THEN '[Hình ảnh]' ELSE content END 
+=======
+                    SELECT TOP 1 CASE WHEN msg_type = 'image' THEN '[Hình ảnh]' ELSE content END
+>>>>>>> Stashed changes
                     FROM Messages m 
                     WHERE m.conversation_id = c.conversation_id 
                     ORDER BY created_at DESC
