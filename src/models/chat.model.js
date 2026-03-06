@@ -24,6 +24,22 @@ const getConversationByActivityId = async (activityId) => {
     return result.recordset[0];
 };
 
+// Lấy Private Conversation giữa 2 user, bỏ qua việc left_at có bị set hay chưa
+const getPrivateConversation = async (user1, user2) => {
+    const pool = getPool();
+    const result = await pool.request()
+        .input('u1', sql.Int, user1)
+        .input('u2', sql.Int, user2)
+        .query(`
+            SELECT c.conversation_id 
+            FROM Conversations c
+            JOIN ConversationMembers m1 ON c.conversation_id = m1.conversation_id AND m1.user_id = @u1
+            JOIN ConversationMembers m2 ON c.conversation_id = m2.conversation_id AND m2.user_id = @u2
+            WHERE c.conversation_type = 'private'
+        `);
+    return result.recordset[0];
+};
+
 // Thêm member vào phòng
 const addMember = async (conversationId, userId, role = 'member') => {
     const pool = getPool();
@@ -58,7 +74,7 @@ const saveMessage = async (conversationId, senderId, content, msgType = 'text') 
             VALUES (@convId, @senderId, @content, @msgType, SYSDATETIME());
             
             SELECT 
-                m.message_id, m.conversation_id, m.sender_id, m.content, m.msg_type, m.created_at, m.read_by_users,
+                m.message_id, m.conversation_id, m.sender_id, m.content, m.msg_type, m.created_at,
                 u.full_name AS sender_name, u.avatar_url AS sender_avatar
             FROM Messages m
             JOIN Users u ON m.sender_id = u.user_id
@@ -75,7 +91,14 @@ const getUserConversations = async (userId) => {
         .query(`
              SELECT 
                  c.conversation_id, c.conversation_type, c.activity_id,
-                 a.title AS activity_title,
+                 CASE 
+                    WHEN c.conversation_type = 'private' THEN 
+                        (SELECT TOP 1 u.full_name 
+                         FROM ConversationMembers cm2 
+                         JOIN Users u ON cm2.user_id = u.user_id 
+                         WHERE cm2.conversation_id = c.conversation_id AND cm2.user_id != @userId)
+                    ELSE a.title 
+                 END AS activity_title,
                  cm.role AS user_role,
                  (
                     SELECT TOP 1 content 
@@ -107,7 +130,7 @@ const getMessages = async (conversationId, limit, offset) => {
         .input('limit', sql.Int, limit)
         .query(`
             SELECT 
-                m.message_id, m.conversation_id, m.sender_id, m.content, m.msg_type, m.created_at, m.read_by_users,
+                m.message_id, m.conversation_id, m.sender_id, m.content, m.msg_type, m.created_at,
                 u.full_name AS sender_name, u.avatar_url AS sender_avatar
             FROM Messages m
             JOIN Users u ON m.sender_id = u.user_id
@@ -169,5 +192,6 @@ module.exports = {
     getMessages,
     checkMembership,
     leaveConversation,
-    getConversationMembers
+    getConversationMembers,
+    getPrivateConversation
 };
