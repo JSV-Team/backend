@@ -32,9 +32,26 @@ const getMembers = asyncHandler(async (req, res) => {
     res.json(members);
 });
 
+const getOrInitPrivateChat = asyncHandler(async (req, res) => {
+    const { partnerId } = req.body;
+    const userId = req.body.userId || 2; // CURRENT_USER_ID, nên lấy từ token
+
+    if (!partnerId) {
+        return res.status(400).json({ message: "Thiếu partnerId" });
+    }
+
+    try {
+        const conv = await chatService.getOrInitPrivateConversation(userId, partnerId);
+        res.json(conv);
+    } catch (error) {
+        res.status(400).json({ message: error.message });
+    }
+});
+
 module.exports = {
     getConversations,
     getMessages,
     leaveGroup,
-    getMembers
+    getMembers,
+    getOrInitPrivateChat
 };
