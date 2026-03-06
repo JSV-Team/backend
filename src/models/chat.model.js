@@ -103,7 +103,11 @@ const getUserConversations = async (userId) => {
                  cm.role AS user_role,
                  (
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
                     SELECT TOP 1 CASE WHEN msg_type = 'image' THEN '[Hình ảnh]' ELSE content END 
+=======
+                    SELECT TOP 1 CASE WHEN msg_type = 'image' THEN '[Hình ảnh]' ELSE content END
+>>>>>>> Stashed changes
 =======
                     SELECT TOP 1 CASE WHEN msg_type = 'image' THEN '[Hình ảnh]' ELSE content END
 >>>>>>> Stashed changes
