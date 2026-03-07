@@ -67,10 +67,24 @@ const approveActivityRequest = async (requestId) => {
     return requestData;
 };
 
+const deleteActivity = async (activityId, userId) => {
+    if (!activityId || !userId) {
+        throw new Error('activityId và userId là bắt buộc');
+    }
+
+    const result = await activityModel.deleteActivity(activityId, userId);
+    if (!result) {
+        throw new Error('Hoạt động không tồn tại hoặc bạn không có quyền xóa');
+    }
+
+    return result;
+};
+
 module.exports = {
     getPendingActivities,
     deleteActivityRequest,
     getApprovedActivities,
     joinActivity,
-    approveActivityRequest
+    approveActivityRequest,
+    deleteActivity
 };
