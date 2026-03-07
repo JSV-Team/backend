@@ -43,6 +43,15 @@ app.use((err, req, res, next) => {
   const msg = `\n[ERROR] ${err.message}\n${err.stack}\n`;
   console.error(msg);
   logFile.write(msg);
+  
+  // Xử lý multer errors
+  if (err.name === 'MulterError') {
+    return res.status(400).json({
+      message: err.message || 'Lỗi upload file',
+      error: process.env.NODE_ENV === 'development' ? err.toString() : undefined
+    });
+  }
+
   res.status(err.status || 500).json({
     message: err.message || 'Internal Server Error',
     error: process.env.NODE_ENV === 'development' ? err.toString() : undefined
