@@ -14,7 +14,11 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Debug middleware - LOG ALL REQUESTS FIRST
+// Auth routes
+const authRoutes = require("./routes/auth.routes");
+app.use("/api/auth", authRoutes);
+
+// Debug middleware - LOG ALL REQUESTS
 app.use((req, res, next) => {
   const msg = `\n[${new Date().toISOString()}] ${req.method} ${req.path} - Body: ${JSON.stringify(req.body)}\n`;
   console.log(msg);

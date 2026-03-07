@@ -16,8 +16,8 @@ const insertPost = async (userId, content, imageUrl = null, additionalData = {})
       .input('maxParticipants', sql.Int, maxParticipants)
       .input('duration', sql.Int, duration)
       .query(`
-        INSERT INTO Activities (creator_id, title, description, location, max_participants, duration_minutes, created_at)
-        VALUES (@creatorId, @title, @description, @location, @maxParticipants, @duration, SYSDATETIME());
+        INSERT INTO Activities (creator_id, title, description, location, max_participants, duration_minutes, status, created_at)
+        VALUES (@creatorId, @title, @description, @location, @maxParticipants, @duration, 'approved', SYSDATETIME());
         SELECT SCOPE_IDENTITY() AS activity_id;
       `);
 
