@@ -1,7 +1,7 @@
 const { getPool, sql } = require("../config/db");
 
 // Lấy profile của user
-exports.getProfile = async (userId) => {
+exports.getUserProfile = async (userId) => {
   const pool = await getPool();
   const r = await pool.request()
     .input("userId", sql.Int, userId)
@@ -16,7 +16,7 @@ exports.getProfile = async (userId) => {
 };
 
 // Cập nhật profile
-exports.updateProfile = async (userId, payload) => {
+exports.updateUserProfile = async (userId, payload) => {
   const pool = await getPool();
   const { full_name, avatar_url, bio, location } = payload;
 
@@ -32,11 +32,11 @@ exports.updateProfile = async (userId, payload) => {
       WHERE user_id=@userId
     `);
 
-  return this.getProfile(userId);
+  return this.getUserProfile(userId);
 };
 
 // Lấy danh sách sở thích của user
-exports.getInterests = async (userId) => {
+exports.getUserInterests = async (userId) => {
   const pool = await getPool();
   const r = await pool.request()
     .input("userId", sql.Int, userId)
@@ -51,7 +51,7 @@ exports.getInterests = async (userId) => {
 };
 
 // Cập nhật sở thích
-exports.updateInterests = async (userId, interests) => {
+exports.updateUserInterests = async (userId, interests) => {
   const pool = await getPool();
   const tx = new sql.Transaction(pool);
 
@@ -86,7 +86,7 @@ exports.updateInterests = async (userId, interests) => {
     }
 
     await tx.commit();
-    return this.getInterests(userId);
+    return this.getUserInterests(userId);
   } catch (e) {
     await tx.rollback();
     throw e;
