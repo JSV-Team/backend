@@ -17,6 +17,5 @@ router.use('/notifications', notificationRoutes);
 router.use('/login', loginRoutes);
 router.use('/chat', chatRoutes);
 router.use('/upload', uploadRoutes);
-router.use('/', activityRoutes);
 
 module.exports = router;

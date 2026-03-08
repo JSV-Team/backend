@@ -16,8 +16,8 @@ const insertPost = async (userId, content, imageUrl = null, additionalData = {})
       .input('duration', sql.Int, duration)
       .input('imageUrl', sql.NVarChar(1000), imageUrl || null)
       .query(`
-        INSERT INTO Activities (creator_id, title, description, location, max_participants, duration_minutes, image_url, created_at)
-        VALUES (@creatorId, @title, @description, @location, @maxParticipants, @duration, @imageUrl, SYSDATETIME());
+        INSERT INTO Activities (creator_id, title, description, location, max_participants, duration_minutes, created_at)
+        VALUES (@creatorId, @title, @description, @location, @maxParticipants, @duration, SYSDATETIME());
         
         DECLARE @new_activity_id INT = SCOPE_IDENTITY();
         
@@ -55,7 +55,7 @@ const getPostById = async (activityId) => {
           a.location,
           a.max_participants,
           a.created_at,
-          COALESCE(img.image_url, a.image_url) AS image_url,
+          img.image_url AS image_url,
           u.username,
           u.full_name,
           u.avatar_url
@@ -92,7 +92,7 @@ const getAllPosts = async (limit = 50) => {
           a.max_participants,
           a.duration_minutes,
           a.created_at,
-          COALESCE(img.image_url, a.image_url) AS image_url,
+          img.image_url AS image_url,
           u.username,
           u.full_name,
           u.avatar_url

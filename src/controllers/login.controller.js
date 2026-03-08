@@ -1,6 +1,7 @@
 const loginService = require('../services/login.service');
 
 const handleLogin = async (req, res) => {
+    console.log(">>> ĐÃ CHẠM VÀO CONTROLLER!");
     try {
         const { identifier, password } = req.body;
 

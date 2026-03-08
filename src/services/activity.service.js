@@ -5,6 +5,10 @@ const getPendingActivities = async (userId) => {
     return await activityModel.getPendingActivities(userId);
 };
 
+const getPendingApprovals = async (userId) => {
+    return await activityModel.getRequestsToApprove(userId);
+};
+
 const deleteActivityRequest = async (requestId) => {
     await activityModel.deleteActivityRequest(requestId);
 };
@@ -67,10 +71,27 @@ const approveActivityRequest = async (requestId) => {
     return requestData;
 };
 
+// Gọi khi host bấm Reject Request
+const rejectActivityRequest = async (requestId) => {
+    const requestData = await activityModel.rejectActivityRequest(requestId);
+    if (!requestData) {
+        throw new Error('Không tìm thấy yêu cầu hoặc yêu cầu đã được xử lý');
+    }
+
+    const activityResult = await activityModel.getActivityById(requestData.activity_id);
+    if (activityResult && activityResult.length > 0) {
+        const content = `Yêu cầu tham gia hoạt động "${activityResult[0].title}" của bạn đã bị từ chối.`;
+        await notificationService.createNotification(requestData.requester_id, 'system', content, requestData.activity_id);
+    }
+    return requestData;
+};
+
 module.exports = {
     getPendingActivities,
     deleteActivityRequest,
     getApprovedActivities,
     joinActivity,
-    approveActivityRequest
+    approveActivityRequest,
+    getPendingApprovals,
+    rejectActivityRequest
 };

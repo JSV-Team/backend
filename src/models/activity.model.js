@@ -24,6 +24,30 @@ const getPendingActivities = async (userId) => {
   return result.recordset;
 };
 
+const getRequestsToApprove = async (userId) => {
+  const pool = getPool();
+  const result = await pool.request()
+    .input('userId', sql.Int, userId)
+    .query(`
+      SELECT 
+        ar.request_id AS id,
+        a.activity_id,
+        a.title AS name,
+        a.location,
+        ar.created_at AS request_date,
+        u.full_name AS requester_name,
+        u.avatar_url AS requester_avatar,
+        u.user_id AS requester_id,
+        ar.status AS request_status
+      FROM ActivityRequests ar
+      INNER JOIN Activities a ON ar.activity_id = a.activity_id
+      LEFT JOIN Users u ON ar.requester_id = u.user_id
+      WHERE a.creator_id = @userId AND ar.status = 'pending'
+      ORDER BY ar.created_at DESC
+    `);
+  return result.recordset;
+};
+
 const deleteActivityRequest = async (requestId) => {
   const pool = getPool();
   await pool.request()
@@ -109,6 +133,19 @@ const approveActivityRequest = async (requestId) => {
   return result.recordset[0];
 };
 
+const rejectActivityRequest = async (requestId) => {
+  const pool = getPool();
+  const result = await pool.request()
+    .input('id', sql.Int, requestId)
+    .query(`
+      UPDATE ActivityRequests 
+      SET status = 'rejected' 
+      OUTPUT INSERTED.activity_id, INSERTED.requester_id
+      WHERE request_id = @id AND status = 'pending'
+    `);
+  return result.recordset[0];
+};
+
 module.exports = {
   getPendingActivities,
   deleteActivityRequest,
@@ -117,5 +154,7 @@ module.exports = {
   checkActivityRequestExists,
   getUserInfo,
   createActivityRequest,
-  approveActivityRequest
+  approveActivityRequest,
+  getRequestsToApprove,
+  rejectActivityRequest
 };
