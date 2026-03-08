@@ -22,5 +22,6 @@ const getPool = () => {
 
 module.exports = {
   connectDB,
-  getPool
+  getPool,
+  sql
 };

@@ -1,19 +1,24 @@
 const { getPool, sql } = require("../config/db");
+// Tránh require('mssql') trực tiếp ở đây để đồng nhất instance
 
 exports.listByUser = async (userId) => {
   const pool = await getPool();
-  const r = await pool.request()
+    const r = await pool.request()
     .input("userId", sql.Int, userId)
     .query(`
-      SELECT p.post_id, p.user_id, p.content, p.privacy, p.is_featured, p.created_at
-      FROM Posts p
-      WHERE p.user_id=@userId
-      ORDER BY p.created_at DESC
+      SELECT a.activity_id AS post_id, a.creator_id AS user_id, 
+             a.title AS content, a.description, a.location, 
+             a.duration_minutes, a.max_participants, a.created_at,
+             (SELECT TOP 1 image_url FROM ActivityImages WHERE activity_id = a.activity_id) AS image_url
+      FROM Activities a
+      WHERE a.creator_id=@userId
+      ORDER BY a.created_at DESC
     `);
   return r.recordset;
 };
 
 exports.createPost = async (userId, payload) => {
+  console.log(`[posts.service] createPost - userId: ${userId} (${typeof userId})`);
   const pool = await getPool();
   const tx = new sql.Transaction(pool);
 
@@ -23,33 +28,27 @@ exports.createPost = async (userId, payload) => {
   try {
     const insPost = await new sql.Request(tx)
       .input("userId", sql.Int, userId)
-      .input("content", sql.NVarChar(sql.MAX), content ?? null)
-      .input("privacy", sql.NVarChar(20), privacy)
-      .input("is_featured", sql.Bit, Boolean(is_featured))
+      .input("title", sql.NVarChar(200), payload.title || payload.content || "Không tiêu đề")
+      .input("description", sql.NVarChar(sql.MAX), payload.description || payload.desc || "")
+      .input("location", sql.NVarChar(100), payload.location || null)
+      .input("duration", sql.Int, payload.duration_minutes || null)
+      .input("maxParticipants", sql.Int, payload.max_participants || null)
+      .input("status", sql.NVarChar(20), "approved")
       .query(`
-        INSERT INTO Posts(user_id, content, privacy, is_featured)
-        OUTPUT inserted.post_id
-        VALUES (@userId, @content, @privacy, @is_featured)
+        INSERT INTO Activities(creator_id, title, description, location, duration_minutes, max_participants, status)
+        OUTPUT inserted.activity_id
+        VALUES (@userId, @title, @description, @location, @duration, @maxParticipants, @status)
       `);
 
-    const postId = insPost.recordset[0].post_id;
+    const postId = insPost.recordset[0].activity_id;
 
-    // media
+    // media (nếu có)
     for (const m of media || []) {
       if (!m?.url) continue;
       await new sql.Request(tx)
         .input("postId", sql.Int, postId)
-        .input("type", sql.NVarChar(20), m.type || "photo")
-        .input("url", sql.NVarChar(1000), m.url)
-        .query(`INSERT INTO PostMedia(post_id, media_type, url) VALUES(@postId, @type, @url)`);
-    }
-
-    // tags (user ids)
-    for (const uid of tags || []) {
-      await new sql.Request(tx)
-        .input("postId", sql.Int, postId)
-        .input("uid", sql.Int, Number(uid))
-        .query(`INSERT INTO PostTags(post_id, tagged_user_id) VALUES(@postId, @uid)`);
+        .input("url", sql.NVarChar(500), m.url)
+        .query(`INSERT INTO ActivityImages(activity_id, image_url) VALUES(@postId, @url)`);
     }
 
     await tx.commit();

@@ -9,9 +9,13 @@ exports.listByUser = async (req, res, next) => {
 
 exports.createPost = async (req, res, next) => {
   try {
-    const userId = Number(req.params.userId);
+    const userId = Number(req.params.userId || req.body.userId);
+    console.log(`[posts.controller] createPost - userId: ${userId}, body keys: ${Object.keys(req.body)}`);
     res.json(await s.createPost(userId, req.body));
-  } catch (e) { next(e); }
+  } catch (e) { 
+    console.error(`[posts.controller] createPost ERROR:`, e);
+    next(e); 
+  }
 };
 
 exports.detail = async (req, res, next) => {

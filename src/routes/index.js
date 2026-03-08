@@ -4,26 +4,22 @@ const router = express.Router();
 // Import all route files
 const postRoutes = require('./post.route');
 const activityRoutes = require('./activity.route');
-
 const postsRoutes = require('./posts.routes');
 const profileRoutes = require('./profile.routes');
-const usersRoutes = require('./users.routes.new');
+const usersRoutes = require('./users.routes');
 const reputationRoutes = require('./reputation.routes');
-
-// Register all routes
-router.use('/posts', postRoutes);        // Original posts route
-router.use('/api/posts', postsRoutes);   // New posts route (profile, etc.)
-router.use('/api/profile', profileRoutes);
-router.use('/api/users', usersRoutes);
-router.use('/api/reputation', reputationRoutes);
-router.use('/', activityRoutes);
-
 const notificationRoutes = require('./notification.route');
 const loginRoutes = require('./login.route');
-// mount sub‑routers
-router.use('/posts', postRoutes);
-router.use('/', activityRoutes);    // activityRoutes define their own paths (e.g. /activities)
-router.use('/notifications', notificationRoutes);
-router.use('/login', loginRoutes);
+const uploadRoutes = require('./upload.route');
+
+// Register all routes - Lưu ý: Thứ tự quan trọng!
+router.use('/profile', profileRoutes);   // /api/profile
+router.use('/users', usersRoutes);        // /api/users  
+router.use('/reputation', reputationRoutes); // /api/reputation
+router.use('/notifications', notificationRoutes); // /api/notifications
+router.use('/login', loginRoutes);         // /api/login
+router.use('/posts', postsRoutes);         // /api/posts
+router.use('/activities', activityRoutes);  // /api/activities
+router.use('/upload', uploadRoutes);        // /api/upload
 
 module.exports = router;

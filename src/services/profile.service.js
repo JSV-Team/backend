@@ -1,12 +1,13 @@
-const { getPool, sql } = require("../config/db");
+const mssql = require("mssql");
+const { getPool } = require("../config/db");
 
 exports.getProfile = async (userId) => {
   const pool = await getPool();
   const r = await pool.request()
-    .input("userId", sql.Int, userId)
+    .input("userId", mssql.Int, userId)
     .query(`
-      SELECT user_id, username, full_name, email, gender, dob, avatar_url, bio, location,
-             reputation_score, fer_score, fing_score, group_score
+      SELECT user_id, username, full_name, email, avatar_url, bio, location,
+             reputation_score, gender, dob
       FROM Users WHERE user_id=@userId
     `);
 
@@ -16,31 +17,35 @@ exports.getProfile = async (userId) => {
 
 exports.updateProfile = async (userId, payload) => {
   const pool = await getPool();
-  const { full_name, email, gender, dob, avatar_url, bio, location } = payload;
+  const { full_name, email, avatar_url, bio, location, gender, dob } = payload;
+
+  // Fetch current profile to get current email if not provided
+  const current = await exports.getProfile(userId);
 
   await pool.request()
-    .input("userId", sql.Int, userId)
-    .input("full_name", sql.NVarChar(100), full_name ?? null)
-    .input("email", sql.NVarChar(255), email ?? null)
-    .input("gender", sql.NVarChar(20), gender ?? null)
-    .input("dob", sql.Date, dob ? new Date(dob) : null)
-    .input("avatar_url", sql.NVarChar(500), avatar_url ?? null)
-    .input("bio", sql.NVarChar(sql.MAX), bio ?? null)
-    .input("location", sql.NVarChar(100), location ?? null)
+    .input("userId", mssql.Int, userId)
+    .input("full_name", mssql.NVarChar(100), full_name ?? current.full_name)
+    .input("email", mssql.NVarChar(255), email ?? current.email)
+    .input("avatar_url", mssql.NVarChar(500), avatar_url ?? current.avatar_url)
+    .input("bio", mssql.NVarChar(mssql.MAX), bio ?? current.bio)
+    .input("location", mssql.NVarChar(100), location ?? current.location)
+    .input("gender", mssql.NVarChar(10), gender ?? current.gender)
+    .input("dob", mssql.Date, dob ?? current.dob)
     .query(`
       UPDATE Users
-      SET full_name=@full_name, email=@email, gender=@gender, dob=@dob,
-          avatar_url=@avatar_url, bio=@bio, location=@location
+      SET full_name=@full_name, email=@email,
+          avatar_url=@avatar_url, bio=@bio, location=@location,
+          gender=@gender, dob=@dob
       WHERE user_id=@userId
     `);
 
-  return this.getProfile(userId);
+  return exports.getProfile(userId);
 };
 
 exports.getInterests = async (userId) => {
   const pool = await getPool();
   const r = await pool.request()
-    .input("userId", sql.Int, userId)
+    .input("userId", mssql.Int, userId)
     .query(`
       SELECT i.interest_id, i.name
       FROM UserInterests ui
@@ -53,21 +58,21 @@ exports.getInterests = async (userId) => {
 
 exports.updateInterests = async (userId, interests) => {
   const pool = await getPool();
-  const tx = new sql.Transaction(pool);
+  const tx = new mssql.Transaction(pool);
 
   const clean = [...new Set((interests || []).map(x => String(x).trim()).filter(Boolean))];
 
   await tx.begin();
   try {
     // Xóa hết interests cũ
-    await new sql.Request(tx)
-      .input("userId", sql.Int, userId)
+    await new mssql.Request(tx)
+      .input("userId", mssql.Int, userId)
       .query(`DELETE FROM UserInterests WHERE user_id=@userId`);
 
     for (const name of clean) {
       // Upsert interest
-      const ins = await new sql.Request(tx)
-        .input("name", sql.NVarChar(100), name)
+      const ins = await new mssql.Request(tx)
+        .input("name", mssql.NVarChar(100), name)
         .query(`
           MERGE Interests AS t
           USING (SELECT @name AS name) AS s
@@ -79,14 +84,14 @@ exports.updateInterests = async (userId, interests) => {
       const interestId = ins.recordset[0]?.interest_id;
       if (!interestId) continue;
 
-      await new sql.Request(tx)
-        .input("userId", sql.Int, userId)
-        .input("interestId", sql.Int, interestId)
+      await new mssql.Request(tx)
+        .input("userId", mssql.Int, userId)
+        .input("interestId", mssql.Int, interestId)
         .query(`INSERT INTO UserInterests(user_id, interest_id) VALUES(@userId, @interestId)`);
     }
 
     await tx.commit();
-    return this.getInterests(userId);
+    return exports.getInterests(userId);
   } catch (e) {
     await tx.rollback();
     throw e;

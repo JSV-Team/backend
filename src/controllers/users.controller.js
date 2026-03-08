@@ -1,6 +1,10 @@
-const router = require("express").Router();
-const c = require("../controllers/users.controller");
+const s = require("../services/users.service");
 
-router.get("/", c.search);
+exports.search = async (req, res, next) => {
+  try {
+    const q = String(req.query.search || "").trim();
+    const data = await s.search(q);
+    res.json(data);
+  } catch (e) { next(e); }
+};
 
-module.exports = router;
