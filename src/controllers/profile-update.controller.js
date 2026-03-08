@@ -1,4 +1,4 @@
-const profileService = require('../services/profile.service');
+const profileService = require('../services/profile-update.service');
 const bcrypt = require('bcrypt');
 const sql = require('mssql');
 const { getPool } = require('../config/db');
@@ -8,8 +8,8 @@ const getProfile = async (req, res) => {
     try {
         const userId = req.user.user_id;
         
-        const profile = await profileService.getProfile(userId);
-        const interests = await profileService.getInterests(userId);
+        const profile = await profileService.getUserProfile(userId);
+        const interests = await profileService.getUserInterests(userId);
         
         return res.status(200).json({
             success: true,
@@ -32,8 +32,8 @@ const getPublicProfile = async (req, res) => {
     try {
         const { userId } = req.params;
         
-        const profile = await profileService.getProfile(userId);
-        const interests = await profileService.getInterests(userId);
+        const profile = await profileService.getUserProfile(userId);
+        const interests = await profileService.getUserInterests(userId);
 
         return res.status(200).json({
             success: true,
@@ -62,7 +62,7 @@ const getPublicProfile = async (req, res) => {
 const updateProfile = async (req, res) => {
     try {
         const userId = req.user.user_id;
-        const { full_name, email, gender, dob, avatar_url, bio, location } = req.body;
+        const { full_name, avatar_url, bio, location } = req.body;
 
         // Validate dữ liệu đầu vào
         if (full_name && full_name.length > 100) {
@@ -81,16 +81,13 @@ const updateProfile = async (req, res) => {
 
         const profileData = {
             full_name,
-            email,
-            gender,
-            dob,
             avatar_url,
             bio,
             location
         };
 
-        const updatedProfile = await profileService.updateProfile(userId, profileData);
-        const interests = await profileService.getInterests(userId);
+        const updatedProfile = await profileService.updateUserProfile(userId, profileData);
+        const interests = await profileService.getUserInterests(userId);
 
         return res.status(200).json({
             success: true,
@@ -189,7 +186,7 @@ const updateInterests = async (req, res) => {
             });
         }
 
-        const updatedInterests = await profileService.updateInterests(userId, interests);
+        const updatedInterests = await profileService.updateUserInterests(userId, interests);
 
         return res.status(200).json({
             success: true,

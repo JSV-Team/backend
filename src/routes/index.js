@@ -23,3 +23,4 @@ router.use('/activities', activityRoutes);  // /api/activities
 router.use('/upload', uploadRoutes);        // /api/upload
 
 module.exports = router;
+

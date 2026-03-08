@@ -1,13 +1,14 @@
 const mssql = require("mssql");
 const { getPool } = require("../config/db");
 
+// Lấy profile của user
 exports.getProfile = async (userId) => {
   const pool = await getPool();
   const r = await pool.request()
     .input("userId", mssql.Int, userId)
     .query(`
       SELECT user_id, username, full_name, email, avatar_url, bio, location,
-             reputation_score, gender, dob
+             reputation_score, gender, dob, created_at
       FROM Users WHERE user_id=@userId
     `);
 
@@ -15,6 +16,7 @@ exports.getProfile = async (userId) => {
   return r.recordset[0];
 };
 
+// Cập nhật profile
 exports.updateProfile = async (userId, payload) => {
   const pool = await getPool();
   const { full_name, email, avatar_url, bio, location, gender, dob } = payload;
@@ -42,6 +44,7 @@ exports.updateProfile = async (userId, payload) => {
   return exports.getProfile(userId);
 };
 
+// Lấy danh sách sở thích của user
 exports.getInterests = async (userId) => {
   const pool = await getPool();
   const r = await pool.request()
@@ -56,6 +59,7 @@ exports.getInterests = async (userId) => {
   return r.recordset;
 };
 
+// Cập nhật sở thích
 exports.updateInterests = async (userId, interests) => {
   const pool = await getPool();
   const tx = new mssql.Transaction(pool);
@@ -97,3 +101,4 @@ exports.updateInterests = async (userId, interests) => {
     throw e;
   }
 };
+

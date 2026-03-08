@@ -1,12 +1,9 @@
 const express = require('express');
 const router = express.Router();
-const profileController = require('../controllers/profile.controller');
+const profileController = require('../controllers/profile-update.controller');
 
 // Middleware giả lập auth - trong thực tế cần thay thế bằng middleware auth thực
-// Lấy user_id từ header hoặc query (demo purpose)
 const authMiddleware = (req, res, next) => {
-    // Trong production, đây sẽ là JWT verification middleware
-    // Hiện tại lấy user_id từ header x-auth-user-id
     const userId = req.headers['x-auth-user-id'] || req.query.userId;
     
     if (!userId) {
