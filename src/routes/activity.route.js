@@ -26,5 +26,11 @@ router.get('/activities', activityController.getActivities);
 // POST /api/activities/join
 // =============================================
 router.post('/activities/join', activityController.joinActivity);
+// =============================================
+// DELETE /api/activities/:id
+// =============================================
+router.delete('/activities/:id', activityController.deleteActivity);
+
+router.get('/test-route', (req, res) => res.json({ message: 'Route is active' }));
 
 module.exports = router;

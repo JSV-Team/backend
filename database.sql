@@ -98,12 +98,12 @@ CREATE TABLE Activities (
     duration_minutes INT           NULL,
     max_participants INT           NULL,   -- NULL = không giới hạn
 
-    -- pending | approved | rejected | deleted
-    status           NVARCHAR(20)  NOT NULL CONSTRAINT DF_Activities_Status    DEFAULT 'pending',
+    -- active | deleted
+    status           NVARCHAR(20)  NOT NULL CONSTRAINT DF_Activities_Status    DEFAULT 'active',
     created_at       DATETIME2     NOT NULL CONSTRAINT DF_Activities_CreatedAt DEFAULT SYSDATETIME(),
 
     CONSTRAINT FK_Activities_Creator  FOREIGN KEY (creator_id) REFERENCES Users(user_id),
-    CONSTRAINT CHK_Activities_Status  CHECK (status IN ('pending', 'approved', 'rejected', 'deleted')),
+    CONSTRAINT CHK_Activities_Status  CHECK (status IN ('active', 'deleted')),
     CONSTRAINT CHK_Activities_MaxPart CHECK (max_participants IS NULL OR max_participants > 0)
 );
 GO
