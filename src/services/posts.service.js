@@ -33,11 +33,10 @@ exports.createPost = async (userId, payload) => {
       .input("location", sql.NVarChar(100), payload.location || null)
       .input("duration", sql.Int, payload.duration_minutes || null)
       .input("maxParticipants", sql.Int, payload.max_participants || null)
-      .input("status", sql.NVarChar(20), "approved")
       .query(`
-        INSERT INTO Activities(creator_id, title, description, location, duration_minutes, max_participants, status)
+        INSERT INTO Activities(creator_id, title, description, location, duration_minutes, max_participants)
         OUTPUT inserted.activity_id
-        VALUES (@userId, @title, @description, @location, @duration, @maxParticipants, @status)
+        VALUES (@userId, @title, @description, @location, @duration, @maxParticipants)
       `);
 
     const postId = insPost.recordset[0].activity_id;
