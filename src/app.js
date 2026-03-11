@@ -14,6 +14,9 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Serve file upload tĩnh
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+
 // Debug middleware - LOG ALL REQUESTS FIRST
 app.use((req, res, next) => {
   const msg = `\n[${new Date().toISOString()}] ${req.method} ${req.path} - Body: ${JSON.stringify(req.body)}\n`;

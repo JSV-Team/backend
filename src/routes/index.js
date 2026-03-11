@@ -10,6 +10,7 @@ const usersRoutes = require('./users.routes');
 const reputationRoutes = require('./reputation.routes');
 const notificationRoutes = require('./notification.route');
 const loginRoutes = require('./login.route');
+<<<<<<< HEAD
 const uploadRoutes = require('./upload.route');
 
 // Register all routes - Lưu ý: Thứ tự quan trọng!
@@ -23,4 +24,18 @@ router.use('/activities', activityRoutes);  // /api/activities
 router.use('/upload', uploadRoutes);        // /api/upload
 
 module.exports = router;
+=======
+// mount sub‑routers
+const chatRoutes = require('./chat.route');
+const uploadRoutes = require('./upload.route');
+
+
+router.use('/posts', postRoutes);
+router.use('/', activityRoutes);    // activityRoutes define their own paths (e.g. /activities)
+router.use('/notifications', notificationRoutes);
+router.use('/login', loginRoutes);
+router.use('/chat', chatRoutes);
+router.use('/upload', uploadRoutes);
+router.use('/', activityRoutes);
+>>>>>>> main
 

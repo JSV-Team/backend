@@ -5,7 +5,7 @@ const createPost = asyncHandler(async (req, res) => {
   console.log('[POST CONTROLLER] ===== STARTING =====');
   const { content, imageUrl, description, location, maxParticipants, duration, title } = req.body;
 
-  console.log('[POST CONTROLLER] Received:', { content, title, description });
+  console.log('[POST CONTROLLER] Received:', { content, title, description, imageUrl });
 
   // Get userId from request - use userId=2 for testing (temporary login)
   const userId = req.body.userId || 2;
