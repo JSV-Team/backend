@@ -205,11 +205,63 @@ const updateInterests = async (req, res) => {
     }
 };
 
+// Cập nhật profile bằng userId (không cần auth)
+const updateProfileById = async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const { full_name, email, gender, dob, avatar_url, bio, location } = req.body;
+
+        // Validate dữ liệu đầu vào
+        if (full_name && full_name.length > 100) {
+            return res.status(400).json({
+                success: false,
+                message: "Họ tên không được quá 100 ký tự"
+            });
+        }
+
+        if (bio && bio.length > 5000) {
+            return res.status(400).json({
+                success: false,
+                message: "Bio không được quá 5000 ký tự"
+            });
+        }
+
+        const profileData = {
+            full_name,
+            email,
+            gender,
+            dob,
+            avatar_url,
+            bio,
+            location
+        };
+
+        const updatedProfile = await profileService.updateProfile(userId, profileData);
+        const interests = await profileService.getInterests(userId);
+
+        return res.status(200).json({
+            success: true,
+            message: "Cập nhật profile thành công",
+            data: {
+                ...updatedProfile,
+                interests
+            }
+        });
+    } catch (error) {
+        console.error("Lỗi tại Profile Controller - updateProfileById:", error);
+        return res.status(error.status || 500).json({
+            success: false,
+            message: error.message || "Lỗi server nội bộ!"
+        });
+    }
+};
+
 module.exports = {
     getProfile,
     getPublicProfile,
     updateProfile,
     changePassword,
-    updateInterests
+    updateInterests,
+    updateProfileById
 };
 

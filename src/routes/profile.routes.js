@@ -30,6 +30,11 @@ router.get('/', authMiddleware, profileController.getProfile);
 // @access  Private
 router.put('/', authMiddleware, profileController.updateProfile);
 
+// @route   PUT /api/profile/:userId
+// @desc    Cập nhật thông tin profile của user bất kỳ
+// @access  Public (có thể bỏ auth nếu cần)
+router.put('/:userId', profileController.updateProfileById);
+
 // @route   PUT /api/profile/password
 // @desc    Đổi mật khẩu
 // @access  Private

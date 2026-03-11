@@ -38,7 +38,9 @@ router.post("/avatar", upload.single("avatar"), (req, res) => {
     return res.status(400).json({ message: "No file uploaded" });
   }
   const url = `/uploads/${req.file.filename}`;
-  res.json({ url });
+  // Trả về cả url và fullUrl để frontend dễ sử dụng
+  const fullUrl = `${req.protocol}://${req.get('host')}${url}`;
+  res.json({ url, fullUrl });
 });
 
 // Route mới cho post media (phòng hờ upload nhiều ảnh)
