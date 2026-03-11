@@ -1,5 +1,9 @@
+<<<<<<< HEAD
 const express = require('express');
 const router = express.Router();
+=======
+const router = require("express").Router();
+>>>>>>> 345518ca94d84ac936de49e7b9a6a22800191f84
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
@@ -33,7 +37,7 @@ const upload = multer({
   },
 });
 
-// Route cũ cho avatar
+// POST /api/upload/avatar
 router.post("/avatar", upload.single("avatar"), (req, res) => {
   if (!req.file) {
     return res.status(400).json({ message: "No file uploaded" });
@@ -44,7 +48,7 @@ router.post("/avatar", upload.single("avatar"), (req, res) => {
   res.json({ url, fullUrl });
 });
 
-// Route mới cho post media (phòng hờ upload nhiều ảnh)
+// POST /api/upload/post-media (upload nhiều ảnh)
 router.post("/post-media", upload.array("media", 5), (req, res) => {
   if (!req.files || req.files.length === 0) {
     return res.status(400).json({ message: "No files uploaded" });
@@ -53,13 +57,15 @@ router.post("/post-media", upload.array("media", 5), (req, res) => {
   res.json({ urls });
 });
 
+<<<<<<< HEAD
 // POST /api/upload/image (From main)
+=======
+// POST /api/upload/image (tương đồng với route chính)
+>>>>>>> 345518ca94d84ac936de49e7b9a6a22800191f84
 router.post('/image', upload.single('image'), (req, res) => {
     if (!req.file) {
         return res.status(400).json({ message: 'Không có file được upload' });
     }
-
-    // Trả về URL công khai để FE dùng
     const imageUrl = `/uploads/${req.file.filename}`;
     res.json({
         message: 'Upload thành công',

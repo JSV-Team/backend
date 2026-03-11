@@ -26,6 +26,10 @@ router.get('/', activityController.getActivities);
 // POST /api/activities/join
 // =============================================
 router.post('/join', activityController.joinActivity);
+<<<<<<< HEAD
+=======
+
+>>>>>>> 345518ca94d84ac936de49e7b9a6a22800191f84
 // =============================================
 // DELETE /api/activities/:id
 // =============================================

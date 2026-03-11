@@ -2,7 +2,6 @@ const express = require('express');
 const router = express.Router();
 
 // Import all route files
-const postRoutes = require('./post.route');
 const activityRoutes = require('./activity.route');
 const postsRoutes = require('./posts.routes');
 const profileRoutes = require('./profile.routes');
@@ -14,8 +13,8 @@ const uploadRoutes = require('./upload.route');
 const chatRoutes = require('./chat.route');
 
 // Register all routes - Lưu ý: Thứ tự quan trọng!
-router.use('/profile', profileRoutes);   // /api/profile
-router.use('/users', usersRoutes);        // /api/users  
+router.use('/profile', profileRoutes);       // /api/profile
+router.use('/users', usersRoutes);           // /api/users
 router.use('/reputation', reputationRoutes); // /api/reputation
 router.use('/notifications', notificationRoutes); // /api/notifications
 router.use('/login', loginRoutes);         // /api/login

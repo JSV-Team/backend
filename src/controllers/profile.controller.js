@@ -256,12 +256,32 @@ const updateProfileById = async (req, res) => {
     }
 };
 
+// Lấy danh sách sở thích của user
+const getInterests = async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const interests = await profileService.getInterests(userId);
+        
+        return res.status(200).json({
+            success: true,
+            data: interests
+        });
+    } catch (error) {
+        console.error("Lỗi tại Profile Controller - getInterests:", error);
+        return res.status(error.status || 500).json({
+            success: false,
+            message: error.message || "Lỗi server nội bộ!"
+        });
+    }
+};
+
 module.exports = {
     getProfile,
     getPublicProfile,
     updateProfile,
     changePassword,
     updateInterests,
-    updateProfileById
+    updateProfileById,
+    getInterests
 };
 

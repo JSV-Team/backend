@@ -19,7 +19,9 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // Debug middleware - LOG ALL REQUESTS FIRST
 app.use((req, res, next) => {
-  const msg = `\n[${new Date().toISOString()}] ${req.method} ${req.path} - Body: ${JSON.stringify(req.body)}\n`;
+  const hasBody = ['POST', 'PUT', 'PATCH'].includes(req.method);
+  const bodyStr = hasBody ? ` - Body: ${JSON.stringify(req.body)}` : '';
+  const msg = `\n[${new Date().toISOString()}] ${req.method} ${req.path}${bodyStr}\n`;
   console.log(msg);
   logFile.write(msg);
   next();

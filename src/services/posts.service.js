@@ -3,7 +3,7 @@ const { getPool, sql } = require("../config/db");
 
 exports.listByUser = async (userId) => {
   const pool = await getPool();
-    const r = await pool.request()
+  const r = await pool.request()
     .input("userId", sql.Int, userId)
     .query(`
       SELECT a.activity_id AS post_id, a.creator_id AS user_id, 
@@ -33,11 +33,10 @@ exports.createPost = async (userId, payload) => {
       .input("location", sql.NVarChar(100), payload.location || null)
       .input("duration", sql.Int, payload.duration_minutes || null)
       .input("maxParticipants", sql.Int, payload.max_participants || null)
-      .input("status", sql.NVarChar(20), "active")
       .query(`
-        INSERT INTO Activities(creator_id, title, description, location, duration_minutes, max_participants, status)
+        INSERT INTO Activities(creator_id, title, description, location, duration_minutes, max_participants)
         OUTPUT inserted.activity_id
-        VALUES (@userId, @title, @description, @location, @duration, @maxParticipants, @status)
+        VALUES (@userId, @title, @description, @location, @duration, @maxParticipants)
       `);
 
     const postId = insPost.recordset[0].activity_id;

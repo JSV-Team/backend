@@ -20,21 +20,6 @@ const authMiddleware = (req, res, next) => {
     next();
 };
 
-// @route   GET /api/profile
-// @desc    Lấy thông tin profile của user hiện tại
-// @access  Private
-router.get('/', authMiddleware, profileController.getProfile);
-
-// @route   PUT /api/profile
-// @desc    Cập nhật thông tin profile
-// @access  Private
-router.put('/', authMiddleware, profileController.updateProfile);
-
-// @route   PUT /api/profile/:userId
-// @desc    Cập nhật thông tin profile của user bất kỳ
-// @access  Public (có thể bỏ auth nếu cần)
-router.put('/:userId', profileController.updateProfileById);
-
 // @route   PUT /api/profile/password
 // @desc    Đổi mật khẩu
 // @access  Private
@@ -45,10 +30,30 @@ router.put('/password', authMiddleware, profileController.changePassword);
 // @access  Private
 router.put('/interests', authMiddleware, profileController.updateInterests);
 
+// @route   GET /api/profile
+// @desc    Lấy thông tin profile của user hiện tại
+// @access  Private
+router.get('/', authMiddleware, profileController.getProfile);
+
+// @route   PUT /api/profile
+// @desc    Cập nhật thông tin profile
+// @access  Private
+router.put('/', authMiddleware, profileController.updateProfile);
+
 // @route   GET /api/profile/:userId
 // @desc    Lấy thông tin public profile của user khác
 // @access  Public
 router.get('/:userId', profileController.getPublicProfile);
+
+// @route   GET /api/profile/:userId/interests
+// @desc    Lấy danh sách sở thích của user
+// @access  Public
+router.get('/:userId/interests', profileController.getInterests);
+
+// @route   PUT /api/profile/:userId
+// @desc    Cập nhật thông tin profile của user bất kỳ
+// @access  Public (có thể bỏ auth nếu cần)
+router.put('/:userId', profileController.updateProfileById);
 
 module.exports = router;
 
