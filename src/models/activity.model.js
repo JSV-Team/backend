@@ -46,9 +46,10 @@ const getApprovedActivities = async () => {
       u.username,
       u.full_name,
       u.avatar_url,
-      (SELECT TOP 1 ai.image_url FROM ActivityImages ai WHERE ai.activity_id = a.activity_id) AS image_url
+      COALESCE(ai.image_url, a.image_url) AS image_url
     FROM Activities a
     LEFT JOIN Users u ON a.creator_id = u.user_id
+    LEFT JOIN ActivityImages ai ON a.activity_id = ai.activity_id AND ai.is_thumbnail = 1
     WHERE a.status IN ('pending', 'approved')
     ORDER BY a.created_at DESC
   `);
