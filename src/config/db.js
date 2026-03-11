@@ -5,10 +5,25 @@ let pool;
 
 const connectDB = async () => {
   try {
-    pool = await sql.connect(dbConfig);
-    console.log("✅ SQL Server connected");
+    // Use TCP/IP instead of named instance for better compatibility
+    const config = {
+      user: dbConfig.user,
+      password: dbConfig.password,
+      server: "localhost",
+      port: 1433,
+      database: dbConfig.database,
+      options: {
+        encrypt: false,
+        trustServerCertificate: true
+      }
+    };
+    
+    pool = await sql.connect(config);
+    console.log("✅ SQL Server connected successfully");
+    console.log(`   Database: ${config.database}`);
+    console.log(`   Server: ${config.server}:${config.port}`);
   } catch (err) {
-    console.error("❌ SQL Server connection failed:", err);
+    console.error("❌ SQL Server connection failed:", err.message);
     process.exit(1);
   }
 };
