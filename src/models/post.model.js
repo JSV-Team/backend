@@ -16,19 +16,9 @@ const insertPost = async (userId, content, imageUrl = null, additionalData = {})
       .input('duration', sql.Int, duration)
       .input('imageUrl', sql.NVarChar(1000), imageUrl || null)
       .query(`
-        INSERT INTO Activities (creator_id, title, description, location, max_participants, duration_minutes, image_url, created_at)
-        VALUES (@creatorId, @title, @description, @location, @maxParticipants, @duration, @imageUrl, SYSDATETIME());
-        
-        DECLARE @new_activity_id INT = SCOPE_IDENTITY();
-        
-        -- Nếu có imageUrl, lưu luôn vào bảng ActivityImages
-        IF @imageUrl IS NOT NULL
-        BEGIN
-            INSERT INTO ActivityImages (activity_id, image_url, is_thumbnail)
-            VALUES (@new_activity_id, @imageUrl, 1);
-        END
-
-        SELECT @new_activity_id AS activity_id;
+        INSERT INTO Activities (creator_id, title, description, location, max_participants, duration_minutes, status, created_at)
+        VALUES (@creatorId, @title, @description, @location, @maxParticipants, @duration, 'approved', SYSDATETIME());
+        SELECT SCOPE_IDENTITY() AS activity_id;
       `);
 
     const activityId = result.recordset[0].activity_id;

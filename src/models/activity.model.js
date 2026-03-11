@@ -49,7 +49,7 @@ const getApprovedActivities = async () => {
       (SELECT TOP 1 ai.image_url FROM ActivityImages ai WHERE ai.activity_id = a.activity_id) AS image_url
     FROM Activities a
     LEFT JOIN Users u ON a.creator_id = u.user_id
-    WHERE a.status IN ('approved', 'active')
+    WHERE a.status IN ('pending', 'approved')
     ORDER BY a.created_at DESC
   `);
   return result.recordset;
