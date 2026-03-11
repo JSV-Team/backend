@@ -13,6 +13,11 @@ router.get('/pending-activities', activityController.getPendingActivities);
 router.delete('/pending-activities/:id', activityController.deleteActivityRequest);
 
 // =============================================
+// PATCH /api/pending-activities/:id/approve
+// =============================================
+router.patch('/pending-activities/:id/approve', activityController.approveActivityRequest);
+
+// =============================================
 // GET /api/activities
 // =============================================
 router.get('/', activityController.getActivities);
@@ -21,6 +26,13 @@ router.get('/', activityController.getActivities);
 // POST /api/activities/join
 // =============================================
 router.post('/join', activityController.joinActivity);
+
+// =============================================
+// DELETE /api/activities/:id
+// =============================================
+router.delete('/:id', activityController.deleteActivity);
+
+router.get('/test-route', (req, res) => res.json({ message: 'Route is active' }));
 
 module.exports = router;
 

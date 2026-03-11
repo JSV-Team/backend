@@ -49,7 +49,7 @@ const getApprovedActivities = async () => {
       (SELECT TOP 1 ai.image_url FROM ActivityImages ai WHERE ai.activity_id = a.activity_id) AS image_url
     FROM Activities a
     LEFT JOIN Users u ON a.creator_id = u.user_id
-    WHERE a.status IN ('approved', 'active', 'pending')
+    WHERE a.status IN ('active', 'approved', 'pending')
     ORDER BY a.created_at DESC
   `);
   return result.recordset;
@@ -96,6 +96,33 @@ const createActivityRequest = async (activityId, userId) => {
   return result.recordset[0].request_id;
 };
 
+const approveActivityRequest = async (requestId) => {
+  const pool = getPool();
+  const result = await pool.request()
+    .input('id', sql.Int, requestId)
+    .query(`
+      UPDATE ActivityRequests 
+      SET status = 'accepted' 
+      OUTPUT INSERTED.activity_id, INSERTED.requester_id
+      WHERE request_id = @id AND status = 'pending'
+    `);
+  return result.recordset[0];
+};
+
+const deleteActivity = async (activityId, userId) => {
+  const pool = getPool();
+  const result = await pool.request()
+    .input('activityId', sql.Int, activityId)
+    .input('userId', sql.Int, userId)
+    .query(`
+      UPDATE Activities 
+      SET status = 'deleted' 
+      OUTPUT INSERTED.activity_id
+      WHERE activity_id = @activityId AND creator_id = @userId AND status = 'active'
+    `);
+  return result.recordset[0];
+};
+
 module.exports = {
   getPendingActivities,
   deleteActivityRequest,
@@ -103,5 +130,7 @@ module.exports = {
   getActivityById,
   checkActivityRequestExists,
   getUserInfo,
-  createActivityRequest
+  createActivityRequest,
+  approveActivityRequest,
+  deleteActivity
 };

@@ -44,9 +44,47 @@ const joinActivity = async (activityId, userId) => {
     return requestId;
 };
 
+// Gọi khi host bấm Accept Request
+const approveActivityRequest = async (requestId) => {
+    const requestData = await activityModel.approveActivityRequest(requestId);
+    if (!requestData) {
+        throw new Error('Không tìm thấy yêu cầu hoặc yêu cầu đã được xử lý');
+    }
+
+    // Tự động tạo nhóm chat và thêm member
+    const activityResult = await activityModel.getActivityById(requestData.activity_id);
+    if (activityResult && activityResult.length > 0) {
+        const hostId = activityResult[0].creator_id;
+
+        // Import chatService dynamically if needed to avoid circular logic
+        const chatService = require('./chat.service');
+        await chatService.initOrJoinActivityChat(requestData.activity_id, hostId, requestData.requester_id);
+
+        // Gửi thông báo cho người được duyệt
+        const content = `Yêu cầu tham gia hoạt động "${activityResult[0].title}" của bạn đã được chấp nhận!`;
+        await notificationService.createNotification(requestData.requester_id, 'match_accepted', content, requestData.activity_id);
+    }
+    return requestData;
+};
+
+const deleteActivity = async (activityId, userId) => {
+    if (!activityId || !userId) {
+        throw new Error('activityId và userId là bắt buộc');
+    }
+
+    const result = await activityModel.deleteActivity(activityId, userId);
+    if (!result) {
+        throw new Error('Hoạt động không tồn tại hoặc bạn không có quyền xóa');
+    }
+
+    return result;
+};
+
 module.exports = {
     getPendingActivities,
     deleteActivityRequest,
     getApprovedActivities,
-    joinActivity
+    joinActivity,
+    approveActivityRequest,
+    deleteActivity
 };

@@ -32,7 +32,7 @@ const upload = multer({
   },
 });
 
-// Route cũ cho avatar
+// POST /api/upload/avatar
 router.post("/avatar", upload.single("avatar"), (req, res) => {
   if (!req.file) {
     return res.status(400).json({ message: "No file uploaded" });
@@ -43,13 +43,26 @@ router.post("/avatar", upload.single("avatar"), (req, res) => {
   res.json({ url, fullUrl });
 });
 
-// Route mới cho post media (phòng hờ upload nhiều ảnh)
+// POST /api/upload/post-media (upload nhiều ảnh)
 router.post("/post-media", upload.array("media", 5), (req, res) => {
   if (!req.files || req.files.length === 0) {
     return res.status(400).json({ message: "No files uploaded" });
   }
   const urls = req.files.map(f => `/uploads/${f.filename}`);
   res.json({ urls });
+});
+
+// POST /api/upload/image (tương đồng với route chính)
+router.post('/image', upload.single('image'), (req, res) => {
+    if (!req.file) {
+        return res.status(400).json({ message: 'Không có file được upload' });
+    }
+    const imageUrl = `/uploads/${req.file.filename}`;
+    res.json({
+        message: 'Upload thành công',
+        imageUrl,
+        filename: req.file.filename
+    });
 });
 
 module.exports = router;

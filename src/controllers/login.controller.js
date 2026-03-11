@@ -5,9 +5,9 @@ const handleLogin = async (req, res) => {
         const { identifier, password } = req.body;
 
         if (!identifier || !password) {
-            return res.status(400).json({ 
-                success: false, 
-                message: "Vui lòng nhập Email/Username và Mật khẩu!" 
+            return res.status(400).json({
+                success: false,
+                message: "Vui lòng nhập Email/Username và Mật khẩu!"
             });
         }
 
@@ -17,9 +17,9 @@ const handleLogin = async (req, res) => {
         if (!result.success) {
             // Trả về 403 nếu bị khóa, 401 nếu sai pass/tài khoản
             const statusCode = result.message.includes("khóa") ? 403 : 401;
-            return res.status(statusCode).json({ 
-                success: false, 
-                message: result.message 
+            return res.status(statusCode).json({
+                success: false,
+                message: result.message
             });
         }
 

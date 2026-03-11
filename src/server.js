@@ -1,55 +1,60 @@
 const http = require('http');
-const { Server } = require('socket.io');
 const app = require('./app');
 const { connectDB } = require('./config/db');
+const setupSocket = require('./socket');
 require('dotenv').config();
 
 const PORT = process.env.PORT || 3001;
 
+// 1. Khởi tạo server HTTP bọc Express
 const server = http.createServer(app);
-const io = new Server(server, {
-  cors: {
-    origin: "*", // allow from any origin during development
-    methods: ["GET", "POST"]
-  }
-});
 
-// Socket.IO logi
-io.on('connection', (socket) => {
-  const userId = socket.handshake.auth?.userId;
-  console.log(`🔌 User connected: ${userId} (socket_id: ${socket.id})`);
-
-  socket.on('join_rooms', (roomIds) => {
-    if (Array.isArray(roomIds)) {
-      roomIds.forEach(id => {
-        socket.join(`room_${id}`);
-        // console.log(`User ${userId} joined room_${id}`);
-      });
+// 2. Khởi tạo Socket.IO qua helper (nếu có file socket.js)
+// Nếu không có socket.js, ta sẽ dùng logic inline
+let io;
+try {
+  io = setupSocket(server);
+} catch (e) {
+  const { Server } = require('socket.io');
+  io = new Server(server, {
+    cors: {
+      origin: "*",
+      methods: ["GET", "POST"]
     }
   });
-
-  socket.on('send_message', (data, callback) => {
-    const { conversationId, content, msgType, imageUrl } = data;
+  
+  io.on('connection', (socket) => {
+    const userId = socket.handshake.auth?.userId;
+    console.log(`🔌 User connected: ${userId} (socket_id: ${socket.id})`);
     
-    const message = {
-      conversation_id: conversationId,
-      sender_id: userId,
-      content,
-      msg_type: msgType,
-      image_url: imageUrl,
-      created_at: new Date().toISOString()
-    };
+    socket.on('join_rooms', (roomIds) => {
+      if (Array.isArray(roomIds)) {
+        roomIds.forEach(id => socket.join(`room_${id}`));
+      }
+    });
 
-    // Broadcast to the room (including sender if desired, or skip sender using broadcast.to)
-    io.to(`room_${conversationId}`).emit('receive_message', message);
-    
-    if (callback) callback({ status: 'ok' });
-  });
+    socket.on('send_message', (data, callback) => {
+      const { conversationId, content, msgType, imageUrl } = data;
+      const message = {
+        conversation_id: conversationId,
+        sender_id: userId,
+        content,
+        msg_type: msgType,
+        image_url: imageUrl,
+        created_at: new Date().toISOString()
+      };
+      io.to(`room_${conversationId}`).emit('receive_message', message);
+      if (callback) callback({ status: 'ok' });
+    });
 
-  socket.on('disconnect', () => {
-    console.log(`🔌 User disconnected: ${userId}`);
+    socket.on('disconnect', () => {
+      console.log(`🔌 User disconnected: ${userId}`);
+    });
   });
-});
+}
+
+// Lưu io vào app để dùng trong Controller khi cần broadcast sự kiện
+app.set('io', io);
 
 const startServer = async () => {
   try {
