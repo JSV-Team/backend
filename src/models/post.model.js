@@ -83,8 +83,13 @@ const getAllPosts = async (limit = 50) => {
           u.avatar_url
         FROM Activities a
         LEFT JOIN Users u ON a.creator_id = u.user_id
-        LEFT JOIN ActivityImages ai ON a.activity_id = ai.activity_id AND ai.is_thumbnail = 1
-        WHERE a.status IN('approved', 'pending', 'active')
+        OUTER APPLY (
+          SELECT TOP 1 image_url 
+          FROM ActivityImages 
+          WHERE activity_id = a.activity_id 
+          ORDER BY is_thumbnail DESC, sort_order ASC
+        ) img
+        WHERE a.status = 'active'
         ORDER BY a.created_at DESC
       `);
     return result.recordset;

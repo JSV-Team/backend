@@ -110,6 +110,20 @@ const approveActivityRequest = async (requestId) => {
   return result.recordset[0];
 };
 
+const deleteActivity = async (activityId, userId) => {
+  const pool = getPool();
+  const result = await pool.request()
+    .input('activityId', sql.Int, activityId)
+    .input('userId', sql.Int, userId)
+    .query(`
+      UPDATE Activities 
+      SET status = 'deleted' 
+      OUTPUT INSERTED.activity_id
+      WHERE activity_id = @activityId AND creator_id = @userId AND status = 'active'
+    `);
+  return result.recordset[0];
+};
+
 module.exports = {
   getPendingActivities,
   deleteActivityRequest,
@@ -118,5 +132,6 @@ module.exports = {
   checkActivityRequestExists,
   getUserInfo,
   createActivityRequest,
-  approveActivityRequest
+  approveActivityRequest,
+  deleteActivity
 };
