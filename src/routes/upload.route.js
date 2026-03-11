@@ -1,9 +1,5 @@
-<<<<<<< HEAD
-const express = require('express');
+﻿const express = require('express');
 const router = express.Router();
-=======
-const router = require("express").Router();
->>>>>>> 345518ca94d84ac936de49e7b9a6a22800191f84
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
@@ -57,11 +53,7 @@ router.post("/post-media", upload.array("media", 5), (req, res) => {
   res.json({ urls });
 });
 
-<<<<<<< HEAD
-// POST /api/upload/image (From main)
-=======
-// POST /api/upload/image (tương đồng với route chính)
->>>>>>> 345518ca94d84ac936de49e7b9a6a22800191f84
+// POST /api/upload/image
 router.post('/image', upload.single('image'), (req, res) => {
     if (!req.file) {
         return res.status(400).json({ message: 'Không có file được upload' });
