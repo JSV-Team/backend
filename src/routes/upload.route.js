@@ -1,5 +1,5 @@
-<<<<<<< HEAD
-const router = require("express").Router();
+const express = require('express');
+const router = express.Router();
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
@@ -16,7 +16,7 @@ const storage = multer.diskStorage({
     const ext = path.extname(file.originalname);
     const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
     // Use prefix based on fieldname or default to 'file'
-    const prefix = file.fieldname === 'avatar' ? 'avatar' : 'post';
+    const prefix = file.fieldname === 'avatar' ? 'avatar' : (file.fieldname === 'image' ? 'image' : 'post');
     cb(null, prefix + "-" + uniqueSuffix + ext);
   },
 });
@@ -51,13 +51,9 @@ router.post("/post-media", upload.array("media", 5), (req, res) => {
   }
   const urls = req.files.map(f => `/uploads/${f.filename}`);
   res.json({ urls });
-=======
-const express = require('express');
-const router = express.Router();
-const path = require('path');
-const upload = require('../middlewares/upload');
+});
 
-// POST /api/upload/image
+// POST /api/upload/image (From main)
 router.post('/image', upload.single('image'), (req, res) => {
     if (!req.file) {
         return res.status(400).json({ message: 'Không có file được upload' });
@@ -70,7 +66,6 @@ router.post('/image', upload.single('image'), (req, res) => {
         imageUrl,
         filename: req.file.filename
     });
->>>>>>> main
 });
 
 module.exports = router;

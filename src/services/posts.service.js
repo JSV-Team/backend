@@ -33,7 +33,7 @@ exports.createPost = async (userId, payload) => {
       .input("location", sql.NVarChar(100), payload.location || null)
       .input("duration", sql.Int, payload.duration_minutes || null)
       .input("maxParticipants", sql.Int, payload.max_participants || null)
-      .input("status", sql.NVarChar(20), "approved")
+      .input("status", sql.NVarChar(20), "active")
       .query(`
         INSERT INTO Activities(creator_id, title, description, location, duration_minutes, max_participants, status)
         OUTPUT inserted.activity_id
