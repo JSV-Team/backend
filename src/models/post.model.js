@@ -16,19 +16,9 @@ const insertPost = async (userId, content, imageUrl = null, additionalData = {})
       .input('duration', sql.Int, duration)
       .input('imageUrl', sql.NVarChar(1000), imageUrl || null)
       .query(`
-        INSERT INTO Activities (creator_id, title, description, location, max_participants, duration_minutes, image_url, created_at)
-        VALUES (@creatorId, @title, @description, @location, @maxParticipants, @duration, @imageUrl, SYSDATETIME());
-        
-        DECLARE @new_activity_id INT = SCOPE_IDENTITY();
-        
-        -- Nếu có imageUrl, lưu luôn vào bảng ActivityImages
-        IF @imageUrl IS NOT NULL
-        BEGIN
-            INSERT INTO ActivityImages (activity_id, image_url, is_thumbnail)
-            VALUES (@new_activity_id, @imageUrl, 1);
-        END
-
-        SELECT @new_activity_id AS activity_id;
+        INSERT INTO Activities (creator_id, title, description, location, max_participants, duration_minutes, image_url, status, created_at)
+        VALUES (@creatorId, @title, @description, @location, @maxParticipants, @duration, @imageUrl, 'approved', SYSDATETIME());
+        SELECT SCOPE_IDENTITY() AS activity_id;
       `);
 
     const activityId = result.recordset[0].activity_id;
@@ -47,26 +37,21 @@ const getPostById = async (activityId) => {
     const result = await pool.request()
       .input('activityId', sql.Int, activityId)
       .query(`
-    SELECT
-    a.activity_id AS status_id,
-      a.creator_id AS user_id,
-        a.title AS content,
+        SELECT
+          a.activity_id AS status_id,
+          a.creator_id AS user_id,
+          a.title AS content,
           a.description AS extra_content,
           a.location,
           a.max_participants,
           a.created_at,
-          COALESCE(img.image_url, a.image_url) AS image_url,
+          COALESCE(ai.image_url, a.image_url) AS image_url,
           u.username,
           u.full_name,
           u.avatar_url
         FROM Activities a
         LEFT JOIN Users u ON a.creator_id = u.user_id
-        OUTER APPLY (
-          SELECT TOP 1 image_url 
-          FROM ActivityImages 
-          WHERE activity_id = a.activity_id 
-          ORDER BY is_thumbnail DESC, sort_order ASC
-        ) img
+        LEFT JOIN ActivityImages ai ON a.activity_id = ai.activity_id AND ai.is_thumbnail = 1
         WHERE a.activity_id = @activityId
       `);
     return result.recordset[0];
@@ -92,7 +77,7 @@ const getAllPosts = async (limit = 50) => {
           a.max_participants,
           a.duration_minutes,
           a.created_at,
-          COALESCE(img.image_url, a.image_url) AS image_url,
+          COALESCE(ai.image_url, a.image_url) AS image_url,
           u.username,
           u.full_name,
           u.avatar_url

@@ -24,4 +24,12 @@ router.use('/activities', activityRoutes);  // /api/activities
 router.use('/upload', uploadRoutes);        // /api/upload
 router.use('/chat', chatRoutes);            // /api/chat
 
+router.use('/posts', postRoutes);
+router.use('/', activityRoutes);    // activityRoutes define their own paths (e.g. /activities)
+router.use('/notifications', notificationRoutes);
+router.use('/auth', authRoutes);
+router.use('/chat', chatRoutes);
+router.use('/upload', uploadRoutes);
+router.use('/', activityRoutes);
+
 module.exports = router;
