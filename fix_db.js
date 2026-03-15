@@ -1,13 +1,17 @@
 const { connectDB, getPool, sql } = require("./src/config/db");
 
-async function checkConstraint() {
+async function fix() {
     try {
         await connectDB();
         const pool = await getPool();
+        
+        console.log("--- FIXING ACTIVITY STATUSES ---");
         const r = await pool.request().query(`
-            SELECT OBJECT_DEFINITION(OBJECT_ID('CHK_Activities_Status')) AS CheckConstraint
+            UPDATE Activities 
+            SET status = 'active' 
+            WHERE status = 'approved'
         `);
-        console.log(r.recordset[0].CheckConstraint);
+        console.log(`Rows affected: ${r.rowsAffected}`);
         process.exit(0);
     } catch (e) {
         console.error(e);
@@ -15,4 +19,4 @@ async function checkConstraint() {
     }
 }
 
-checkConstraint();
+fix();

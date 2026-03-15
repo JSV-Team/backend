@@ -107,6 +107,5 @@ module.exports = {
     joinActivity,
     approveActivityRequest,
     getPendingApprovals,
-    rejectActivityRequest
     deleteActivity
 };

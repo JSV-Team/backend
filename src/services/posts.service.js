@@ -1,5 +1,4 @@
 const { getPool, sql } = require("../config/db");
-const { checkBannedKeywords } = require("../utils/filter");
 // Tránh require('mssql') trực tiếp ở đây để đồng nhất instance
 
 exports.listByUser = async (userId) => {
@@ -10,12 +9,11 @@ exports.listByUser = async (userId) => {
       SELECT a.activity_id AS post_id, a.creator_id AS user_id, 
              a.title AS content, a.description, a.location, 
              a.duration_minutes, a.max_participants, a.created_at,
-             COALESCE((SELECT TOP 1 image_url FROM ActivityImages WHERE activity_id = a.activity_id), a.image_url) AS image_url
+             (SELECT TOP 1 image_url FROM ActivityImages WHERE activity_id = a.activity_id) AS image_url
       FROM Activities a
-      WHERE a.creator_id=@userId AND a.status = 'active'
+      WHERE a.creator_id=@userId
       ORDER BY a.created_at DESC
     `);
-  console.log(`[posts.service] listByUser - userId: ${userId}, found: ${r.recordset.length} posts`);
   return r.recordset;
 };
 
@@ -26,15 +24,6 @@ exports.createPost = async (userId, payload) => {
 
   const { content, privacy = "public", tags = [], media = [], is_featured = 0 } = payload;
 
-  // Kiểm tra từ khóa cấm
-  const title = payload.title || payload.content || "Không tiêu đề";
-  const description = payload.description || payload.desc || "";
-  const combinedText = `${title} ${description}`;
-  const bannedWord = await checkBannedKeywords(combinedText);
-  if (bannedWord) {
-    throw Object.assign(new Error(`Nội dung chứa từ khóa không phù hợp: "${bannedWord}"`), { status: 400 });
-  }
-
   await tx.begin();
   try {
     const insPost = await new sql.Request(tx)
@@ -44,11 +33,10 @@ exports.createPost = async (userId, payload) => {
       .input("location", sql.NVarChar(100), payload.location || null)
       .input("duration", sql.Int, payload.duration_minutes || null)
       .input("maxParticipants", sql.Int, payload.max_participants || null)
-      .input("imageUrl", sql.NVarChar(500), payload.image_url || (media[0]?.url) || null)
       .query(`
-        INSERT INTO Activities(creator_id, title, description, location, duration_minutes, max_participants, status, image_url)
+        INSERT INTO Activities(creator_id, title, description, location, duration_minutes, max_participants)
         OUTPUT inserted.activity_id
-        VALUES (@userId, @title, @description, @location, @duration, @maxParticipants, 'active', @imageUrl)
+        VALUES (@userId, @title, @description, @location, @duration, @maxParticipants)
       `);
 
     const postId = insPost.recordset[0].activity_id;
