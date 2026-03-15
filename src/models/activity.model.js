@@ -49,7 +49,6 @@ const getApprovedActivities = async () => {
       COALESCE(ai.image_url, a.image_url) AS image_url
     FROM Activities a
     LEFT JOIN Users u ON a.creator_id = u.user_id
-    LEFT JOIN ActivityImages ai ON a.activity_id = ai.activity_id
     WHERE a.status IN ('active', 'approved', 'pending')
     ORDER BY a.created_at DESC
   `);
