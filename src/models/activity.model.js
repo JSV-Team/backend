@@ -73,6 +73,11 @@ const getApprovedActivities = async () => {
       COALESCE(ai.image_url, a.image_url) AS image_url
     FROM Activities a
     LEFT JOIN Users u ON a.creator_id = u.user_id
+    LEFT JOIN (
+        SELECT activity_id, image_url,
+               ROW_NUMBER() OVER (PARTITION BY activity_id ORDER BY is_thumbnail DESC, image_id ASC) as rn
+        FROM ActivityImages
+    ) ai ON a.activity_id = ai.activity_id AND ai.rn = 1
     WHERE a.status IN ('active', 'approved', 'pending')
     ORDER BY a.created_at DESC
   `);
@@ -156,6 +161,5 @@ module.exports = {
   getUserInfo,
   createActivityRequest,
   approveActivityRequest,
-  getRequestsToApprove,
-  rejectActivityRequest
+  getRequestsToApprove
 };

@@ -23,10 +23,7 @@ router.get('/pending-approvals', activityController.getPendingApprovals);
 // =============================================
 router.patch('/pending-activities/:id/approve', activityController.approveActivityRequest);
 
-// =============================================
-// PATCH /api/pending-activities/:id/reject
-// =============================================
-router.patch('/pending-activities/:id/reject', activityController.rejectActivityRequest);
+
 
 // =============================================
 // GET /api/activities

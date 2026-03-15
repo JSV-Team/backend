@@ -17,11 +17,6 @@ app.use(express.urlencoded({ extended: true }));
 // Serve file upload tĩnh
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
-// Debug middleware - LOG ALL REQUESTS FIRST
-// Auth routes
-const authRoutes = require("./routes/auth.routes");
-app.use("/api/auth", authRoutes);
-
 // Debug middleware - LOG ALL REQUESTS
 app.use((req, res, next) => {
   const hasBody = ['POST', 'PUT', 'PATCH'].includes(req.method);

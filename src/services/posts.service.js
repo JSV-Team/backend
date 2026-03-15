@@ -1,5 +1,5 @@
 const { getPool, sql } = require("../config/db");
-// Tránh require('mssql') trực tiếp ở đây để đồng nhất instance
+const bannedKeywordModel = require('../models/bannedKeyword.model');
 
 exports.listByUser = async (userId) => {
   const pool = await getPool();
@@ -19,6 +19,18 @@ exports.listByUser = async (userId) => {
 
 exports.createPost = async (userId, payload) => {
   console.log(`[posts.service] createPost - userId: ${userId} (${typeof userId})`);
+
+  // Banned keyword check
+  let textToCheck = (payload.title || '') + ' ' + (payload.description || payload.desc || '') + ' ' + (payload.location || '');
+  textToCheck = textToCheck.toLowerCase();
+
+  const bannedKeywords = await bannedKeywordModel.getAllBannedKeywords();
+  const foundBannedWord = bannedKeywords.find(keyword => keyword && textToCheck.includes(keyword.toLowerCase()));
+
+  if (foundBannedWord) {
+    throw new Error('Vi phạm từ ngữ đăng bài');
+  }
+
   const pool = await getPool();
   const tx = new sql.Transaction(pool);
 

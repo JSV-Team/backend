@@ -90,7 +90,6 @@ module.exports = {
     getApprovedActivities,
     joinActivity,
     approveActivityRequest,
-    getPendingApprovals,
-    rejectActivityRequest
-    deleteActivity
+    getPendingApprovals
+
 };
