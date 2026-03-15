@@ -51,7 +51,12 @@ const getPostById = async (activityId) => {
           u.avatar_url
         FROM Activities a
         LEFT JOIN Users u ON a.creator_id = u.user_id
-        LEFT JOIN ActivityImages ai ON a.activity_id = ai.activity_id AND ai.is_thumbnail = 1
+        OUTER APPLY (
+          SELECT TOP 1 image_url 
+          FROM ActivityImages 
+          WHERE activity_id = a.activity_id 
+          ORDER BY is_thumbnail DESC, sort_order ASC
+        ) ai
         WHERE a.activity_id = @activityId
       `);
     return result.recordset[0];
@@ -77,7 +82,7 @@ const getAllPosts = async (limit = 50) => {
           a.max_participants,
           a.duration_minutes,
           a.created_at,
-          COALESCE(ai.image_url, a.image_url) AS image_url,
+          COALESCE(img.image_url, a.image_url) AS image_url,
           u.username,
           u.full_name,
           u.avatar_url

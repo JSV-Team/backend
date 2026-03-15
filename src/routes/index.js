@@ -13,7 +13,6 @@ const authRoutes = require('./auth.routes');
 const chatRoutes = require('./chat.route');
 const loginRoutes = require('./login.route');
 const uploadRoutes = require('./upload.route');
-const chatRoutes = require('./chat.route');
 
 // Register all routes - Lưu ý: Thứ tự quan trọng!
 router.use('/profile', profileRoutes);       // /api/profile
