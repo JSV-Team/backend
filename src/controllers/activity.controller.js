@@ -86,6 +86,45 @@ const rejectActivityRequest = asyncHandler(async (req, res) => {
         res.status(500).json({ message: error.message || 'Lỗi Server' });
     }
 });
+const deleteActivity = asyncHandler(async (req, res) => {
+    const activityId = parseInt(req.params.id);
+    const userId = req.body.userId || parseInt(req.query.userId);
+
+    console.log(`[DEBUG] Attempting to delete activity: ID=${activityId}, UserID=${userId}`);
+
+    try {
+        if (!userId) {
+            console.log('[DEBUG] No userId provided in request');
+            return res.status(401).json({ message: 'Không xác định được user' });
+        }
+
+        const result = await activityService.deleteActivity(activityId, userId);
+        console.log('[DEBUG] Deletion successful for ID:', activityId);
+        res.json({ message: 'Xóa bài viết thành công' });
+    } catch (error) {
+        console.error('[DEBUG] Error in deleteActivity controller:', error);
+        if (error.message.includes('không tồn tại hoặc bạn không có quyền xóa')) {
+            return res.status(403).json({ message: error.message });
+        }
+        res.status(500).json({ message: error.message || 'Lỗi Server' });
+    }
+});
+
+const createActivity = asyncHandler(async (req, res) => {
+    try {
+        const activityData = req.body;
+        // Kiểm tra cơ bản
+        if (!activityData.user_id || !activityData.title) {
+            return res.status(400).json({ message: 'Thiếu thông tin user_id hoặc title' });
+        }
+        
+        const newActivityId = await activityService.createActivity(activityData);
+        res.status(201).json({ message: 'Tạo hoạt động thành công', activity_id: newActivityId });
+    } catch (error) {
+        console.error('Lỗi khi tạo hoạt động:', error);
+        res.status(500).json({ message: 'Lỗi Server' });
+    }
+});
 
 module.exports = {
     getPendingActivities,
@@ -94,5 +133,7 @@ module.exports = {
     joinActivity,
     approveActivityRequest,
     getPendingApprovals,
-    rejectActivityRequest
+    rejectActivityRequest,
+    deleteActivity,
+    createActivity
 };

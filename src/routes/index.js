@@ -9,6 +9,7 @@ const loginRoutes = require('./login.route');
 // mount sub‑routers
 const chatRoutes = require('./chat.route');
 const uploadRoutes = require('./upload.route');
+const matchRoutes = require('./match.route');
 
 
 router.use('/posts', postRoutes);
@@ -17,5 +18,6 @@ router.use('/notifications', notificationRoutes);
 router.use('/login', loginRoutes);
 router.use('/chat', chatRoutes);
 router.use('/upload', uploadRoutes);
+router.use('/match', matchRoutes);
 
 module.exports = router;

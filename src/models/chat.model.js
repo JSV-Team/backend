@@ -2,14 +2,15 @@ const { getPool } = require('../config/db');
 const sql = require('mssql');
 
 // Tạo phòng chat mới (chọn Type = activity cho group của bài đăng)
-const createConversation = async (conversationType, activityId = null) => {
+const createConversation = async (conversationType, activityId = null, isAutoCreated = false) => {
     const pool = getPool();
     const result = await pool.request()
         .input('type', sql.NVarChar, conversationType)
         .input('activityId', sql.Int, activityId)
+        .input('isAutoCreated', sql.Bit, isAutoCreated ? 1 : 0)
         .query(`
-            INSERT INTO Conversations (conversation_type, activity_id, created_at)
-            VALUES (@type, @activityId, SYSDATETIME());
+            INSERT INTO Conversations (conversation_type, activity_id, is_auto_created, created_at)
+            VALUES (@type, @activityId, @isAutoCreated, SYSDATETIME());
             SELECT SCOPE_IDENTITY() AS conversation_id;
         `);
     return result.recordset[0].conversation_id;

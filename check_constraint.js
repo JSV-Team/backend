@@ -1,20 +1,15 @@
 require('dotenv').config();
-const { connectDB, getPool } = require('./src/config/db');
+const { connectDB } = require('./src/config/db');
+const sql = require('mssql');
 
 async function checkConstraint() {
-    try {
-        await connectDB();
-        const result = await getPool().request().query(`
-      SELECT definition 
-      FROM sys.check_constraints 
-      WHERE name = 'CHK_Conversation_Type'
+    await connectDB();
+    const result = await sql.query(`
+        SELECT definition 
+        FROM sys.check_constraints 
+        WHERE name = 'CHK_Activities_Status'
     `);
-        console.log("Allowed types in DB:", result.recordset[0]?.definition);
-    } catch (err) {
-        console.error(err);
-    } finally {
-        process.exit();
-    }
+    console.log('Constraint definition:', result.recordset[0]?.definition);
+    process.exit(0);
 }
-
 checkConstraint();

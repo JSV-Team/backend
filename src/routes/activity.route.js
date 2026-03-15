@@ -33,8 +33,19 @@ router.patch('/pending-activities/:id/reject', activityController.rejectActivity
 router.get('/activities', activityController.getActivities);
 
 // =============================================
+// POST /api/activities
+// =============================================
+router.post('/activities', activityController.createActivity);
+
+// =============================================
 // POST /api/activities/join
 // =============================================
 router.post('/activities/join', activityController.joinActivity);
+// =============================================
+// DELETE /api/activities/:id
+// =============================================
+router.delete('/activities/:id', activityController.deleteActivity);
+
+router.get('/test-route', (req, res) => res.json({ message: 'Route is active' }));
 
 module.exports = router;

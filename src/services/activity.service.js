@@ -84,6 +84,26 @@ const rejectActivityRequest = async (requestId) => {
         await notificationService.createNotification(requestData.requester_id, 'system', content, requestData.activity_id);
     }
     return requestData;
+}
+const deleteActivity = async (activityId, userId) => {
+    if (!activityId || !userId) {
+        throw new Error('activityId và userId là bắt buộc');
+    }
+
+    const result = await activityModel.deleteActivity(activityId, userId);
+    if (!result) {
+        throw new Error('Hoạt động không tồn tại hoặc bạn không có quyền xóa');
+    }
+
+    return result;
+};
+
+const createActivity = async (activityData) => {
+    if (!activityData || !activityData.user_id || !activityData.title) {
+        throw new Error('user_id và title là bắt buộc');
+    }
+
+    return await activityModel.createActivity(activityData);
 };
 
 module.exports = {
@@ -93,5 +113,7 @@ module.exports = {
     joinActivity,
     approveActivityRequest,
     getPendingApprovals,
-    rejectActivityRequest
+    rejectActivityRequest,
+    deleteActivity,
+    createActivity
 };

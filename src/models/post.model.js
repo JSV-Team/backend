@@ -104,7 +104,7 @@ const getAllPosts = async (limit = 50) => {
           WHERE activity_id = a.activity_id 
           ORDER BY is_thumbnail DESC, sort_order ASC
         ) img
-        WHERE a.status IN('approved', 'pending', 'active')
+        WHERE a.status = 'active'
         ORDER BY a.created_at DESC
       `);
     return result.recordset;

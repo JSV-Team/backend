@@ -1,7 +1,8 @@
 const app = require('./app');
 const { connectDB } = require('./config/db');
 const http = require('http');
-const setupSocket = require('./socket');
+const socketManager = require('./socket');
+const matchingService = require('./services/matching.service');
 require('dotenv').config();
 
 const PORT = process.env.PORT || 3001;
@@ -10,7 +11,10 @@ const PORT = process.env.PORT || 3001;
 const server = http.createServer(app);
 
 // 2. Khởi tạo Socket.IO
-const io = setupSocket(server);
+const io = socketManager.setupSocket(server);
+
+// Cung cấp socket manager cho matching service
+matchingService.setSocketManager(socketManager);
 
 // Lưu io vào app để dùng trong Controller khi cần broadcast sự kiện
 app.set('io', io);
