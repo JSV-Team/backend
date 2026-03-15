@@ -152,6 +152,19 @@ const deleteActivity = async (activityId, userId) => {
   return result.recordset[0];
 };
 
+const rejectActivityRequest = async (requestId) => {
+  const pool = getPool();
+  const result = await pool.request()
+    .input('id', sql.Int, requestId)
+    .query(`
+      UPDATE ActivityRequests 
+      SET status = 'rejected' 
+      OUTPUT INSERTED.activity_id, INSERTED.requester_id
+      WHERE request_id = @id AND status = 'pending'
+    `);
+  return result.recordset[0];
+};
+
 module.exports = {
   getPendingActivities,
   deleteActivityRequest,
@@ -161,5 +174,7 @@ module.exports = {
   getUserInfo,
   createActivityRequest,
   approveActivityRequest,
-  getRequestsToApprove
+  rejectActivityRequest,
+  getRequestsToApprove,
+  deleteActivity
 };
