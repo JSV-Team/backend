@@ -26,8 +26,8 @@ exports.updateProfile = async (userId, payload) => {
 
   await pool.request()
     .input("userId", mssql.Int, userId)
-    .input("full_name", mssql.NVarChar(100), full_name ?? current.full_name)
-    .input("email", mssql.NVarChar(255), email ?? current.email)
+    .input("full_name", mssql.NVarChar(100), full_name || current.full_name)
+    .input("email", mssql.NVarChar(255), email || current.email)
     .input("avatar_url", mssql.NVarChar(500), avatar_url ?? current.avatar_url)
     .input("bio", mssql.NVarChar(mssql.MAX), bio ?? current.bio)
     .input("location", mssql.NVarChar(100), location ?? current.location)
@@ -81,6 +81,7 @@ exports.updateInterests = async (userId, interests) => {
           MERGE Interests AS t
           USING (SELECT @name AS name) AS s
           ON t.name=s.name
+          WHEN MATCHED THEN UPDATE SET name=s.name
           WHEN NOT MATCHED THEN INSERT(name) VALUES(s.name)
           OUTPUT inserted.interest_id;
         `);
