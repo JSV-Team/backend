@@ -76,6 +76,17 @@ const approveActivityRequest = asyncHandler(async (req, res) => {
     }
 });
 
+const rejectActivityRequest = asyncHandler(async (req, res) => {
+    try {
+        const requestId = parseInt(req.params.id);
+        const data = await activityService.rejectActivityRequest(requestId);
+        res.json({ message: 'Đã từ chối yêu cầu thành công!', data });
+    } catch (error) {
+        console.error('Lỗi khi từ chối yêu cầu:', error);
+        res.status(500).json({ message: error.message || 'Lỗi Server' });
+    }
+});
+
 const deleteActivity = asyncHandler(async (req, res) => {
     const activityId = parseInt(req.params.id);
     const userId = req.body.userId || parseInt(req.query.userId);
@@ -106,6 +117,7 @@ module.exports = {
     getActivities,
     joinActivity,
     approveActivityRequest,
+    rejectActivityRequest,
     getPendingApprovals,
     deleteActivity
 };
