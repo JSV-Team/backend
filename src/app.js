@@ -24,7 +24,9 @@ app.use("/api/auth", authRoutes);
 
 // Debug middleware - LOG ALL REQUESTS
 app.use((req, res, next) => {
-  const msg = `\n[${new Date().toISOString()}] ${req.method} ${req.path} - Body: ${JSON.stringify(req.body)}\n`;
+  const hasBody = ['POST', 'PUT', 'PATCH'].includes(req.method);
+  const bodyStr = hasBody ? ` - Body: ${JSON.stringify(req.body)}` : '';
+  const msg = `\n[${new Date().toISOString()}] ${req.method} ${req.path}${bodyStr}\n`;
   console.log(msg);
   logFile.write(msg);
   next();
@@ -32,6 +34,7 @@ app.use((req, res, next) => {
 
 // Routes
 app.use('/api', routes);
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // Root route
 app.get('/', (req, res) => {

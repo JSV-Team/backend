@@ -20,7 +20,8 @@
     return pool;
   };
 
-  module.exports = {
-    connectDB,
-    getPool
-  };
+module.exports = {
+  sql,
+  connectDB,
+  getPool
+};
