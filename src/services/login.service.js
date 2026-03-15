@@ -5,14 +5,18 @@ const bcrypt = require('bcrypt');
 const verifyUser = async (identifier, password) => {
     const request = new sql.Request();
     request.input('identifier', sql.VarChar, identifier);
-    
+    const dbCheck = await request.query("SELECT DB_NAME() AS dbname");
+console.log("Current DB:", dbCheck.recordset[0].dbname);
     // Tìm user theo email hoặc username
     const result = await request.query(`
         SELECT * FROM Users 
         WHERE email = @identifier OR username = @identifier
     `);
-    
-    const user = result.recordset[0];
+    console.log("Identifier:", "[" + identifier + "]");
+console.log("Query result:", result.recordset);
+
+const user = result.recordset[0];
+console.log("User tìm được:", user);
     if (!user) {
         return { success: false, message: "Tài khoản hoặc mật khẩu không chính xác!" };
     }

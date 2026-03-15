@@ -12,6 +12,18 @@ const getPendingActivities = asyncHandler(async (req, res) => {
     }
 });
 
+const getPendingApprovals = asyncHandler(async (req, res) => {
+    try {
+        const userId = parseInt(req.query.userId);
+        if (!userId) return res.status(400).json({ message: 'Thiếu userId' });
+        const result = await activityService.getPendingApprovals(userId);
+        res.json(result);
+    } catch (error) {
+        console.error('Lỗi khi lấy pending approvals:', error);
+        res.status(500).json({ message: 'Lỗi Server' });
+    }
+});
+
 const deleteActivityRequest = asyncHandler(async (req, res) => {
     try {
         const requestId = parseInt(req.params.id);
@@ -94,5 +106,7 @@ module.exports = {
     getActivities,
     joinActivity,
     approveActivityRequest,
+    getPendingApprovals,
+    rejectActivityRequest
     deleteActivity
 };

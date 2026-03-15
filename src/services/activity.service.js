@@ -5,6 +5,10 @@ const getPendingActivities = async (userId) => {
     return await activityModel.getPendingActivities(userId);
 };
 
+const getPendingApprovals = async (userId) => {
+    return await activityModel.getRequestsToApprove(userId);
+};
+
 const deleteActivityRequest = async (requestId) => {
     await activityModel.deleteActivityRequest(requestId);
 };
@@ -86,5 +90,7 @@ module.exports = {
     getApprovedActivities,
     joinActivity,
     approveActivityRequest,
+    getPendingApprovals,
+    rejectActivityRequest
     deleteActivity
 };

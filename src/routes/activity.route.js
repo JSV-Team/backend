@@ -13,9 +13,20 @@ router.get('/pending-activities', activityController.getPendingActivities);
 router.delete('/pending-activities/:id', activityController.deleteActivityRequest);
 
 // =============================================
+// GET /api/pending-approvals?userId=X
+// =============================================
+router.get('/pending-approvals', activityController.getPendingApprovals);
+
+// =============================================
+// PATCH /api/pending-activities/:id/approve
 // PATCH /api/activities/pending-activities/:id/approve
 // =============================================
 router.patch('/pending-activities/:id/approve', activityController.approveActivityRequest);
+
+// =============================================
+// PATCH /api/pending-activities/:id/reject
+// =============================================
+router.patch('/pending-activities/:id/reject', activityController.rejectActivityRequest);
 
 // =============================================
 // GET /api/activities

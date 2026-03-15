@@ -82,7 +82,7 @@ const getAllPosts = async (limit = 50) => {
           a.max_participants,
           a.duration_minutes,
           a.created_at,
-          COALESCE(img.image_url, a.image_url) AS image_url,
+          img.image_url AS image_url,
           u.username,
           u.full_name,
           u.avatar_url
