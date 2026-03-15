@@ -16,19 +16,9 @@ const insertPost = async (userId, content, imageUrl = null, additionalData = {})
       .input('duration', sql.Int, duration)
       .input('imageUrl', sql.NVarChar(1000), imageUrl || null)
       .query(`
-        INSERT INTO Activities (creator_id, title, description, location, max_participants, duration_minutes, created_at)
-        VALUES (@creatorId, @title, @description, @location, @maxParticipants, @duration, SYSDATETIME());
-        
-        DECLARE @new_activity_id INT = SCOPE_IDENTITY();
-        
-        -- Nếu có imageUrl, lưu luôn vào bảng ActivityImages
-        IF @imageUrl IS NOT NULL
-        BEGIN
-            INSERT INTO ActivityImages (activity_id, image_url, is_thumbnail)
-            VALUES (@new_activity_id, @imageUrl, 1);
-        END
-
-        SELECT @new_activity_id AS activity_id;
+        INSERT INTO Activities (creator_id, title, description, location, max_participants, duration_minutes, image_url, status, created_at)
+        VALUES (@creatorId, @title, @description, @location, @maxParticipants, @duration, @imageUrl, 'active', SYSDATETIME());
+        SELECT SCOPE_IDENTITY() AS activity_id;
       `);
 
     const activityId = result.recordset[0].activity_id;
@@ -47,15 +37,15 @@ const getPostById = async (activityId) => {
     const result = await pool.request()
       .input('activityId', sql.Int, activityId)
       .query(`
-    SELECT
-    a.activity_id AS status_id,
-      a.creator_id AS user_id,
-        a.title AS content,
+        SELECT
+          a.activity_id AS status_id,
+          a.creator_id AS user_id,
+          a.title AS content,
           a.description AS extra_content,
           a.location,
           a.max_participants,
           a.created_at,
-          img.image_url AS image_url,
+          COALESCE(ai.image_url, a.image_url) AS image_url,
           u.username,
           u.full_name,
           u.avatar_url
@@ -66,7 +56,7 @@ const getPostById = async (activityId) => {
           FROM ActivityImages 
           WHERE activity_id = a.activity_id 
           ORDER BY is_thumbnail DESC, sort_order ASC
-        ) img
+        ) ai
         WHERE a.activity_id = @activityId
       `);
     return result.recordset[0];
@@ -104,7 +94,7 @@ const getAllPosts = async (limit = 50) => {
           WHERE activity_id = a.activity_id 
           ORDER BY is_thumbnail DESC, sort_order ASC
         ) img
-        WHERE a.status IN('approved', 'pending', 'active')
+        WHERE a.status = 'active'
         ORDER BY a.created_at DESC
       `);
     return result.recordset;

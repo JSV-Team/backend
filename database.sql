@@ -27,6 +27,8 @@ CREATE TABLE Users (
     avatar_url       NVARCHAR(500) NULL,
     bio              NVARCHAR(MAX) NULL,
     location         NVARCHAR(100) NULL,
+    gender           NVARCHAR(10)  NULL,
+    dob              DATE          NULL,
 
     reputation_score INT           NOT NULL CONSTRAINT DF_Users_Reputation   DEFAULT 100,
 
@@ -98,12 +100,12 @@ CREATE TABLE Activities (
     duration_minutes INT           NULL,
     max_participants INT           NULL,   -- NULL = không giới hạn
 
-    -- pending | approved | rejected | deleted
-    status           NVARCHAR(20)  NOT NULL CONSTRAINT DF_Activities_Status    DEFAULT 'pending',
+    -- active | deleted
+    status           NVARCHAR(20)  NOT NULL CONSTRAINT DF_Activities_Status    DEFAULT 'active',
     created_at       DATETIME2     NOT NULL CONSTRAINT DF_Activities_CreatedAt DEFAULT SYSDATETIME(),
 
     CONSTRAINT FK_Activities_Creator  FOREIGN KEY (creator_id) REFERENCES Users(user_id),
-    CONSTRAINT CHK_Activities_Status  CHECK (status IN ('pending', 'approved', 'rejected', 'deleted')),
+    CONSTRAINT CHK_Activities_Status  CHECK (status IN ('active', 'deleted')),
     CONSTRAINT CHK_Activities_MaxPart CHECK (max_participants IS NULL OR max_participants > 0)
 );
 GO

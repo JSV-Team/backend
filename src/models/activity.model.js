@@ -57,26 +57,37 @@ const deleteActivityRequest = async (requestId) => {
 
 const getApprovedActivities = async () => {
   const pool = getPool();
-  const result = await pool.request().query(`
-    SELECT TOP 50
-      a.activity_id AS status_id,
-      a.creator_id AS user_id,
-      a.title AS content,
-      a.description AS extra_content,
-      a.location,
-      a.max_participants,
-      a.duration_minutes,
-      a.created_at,
-      u.username,
-      u.full_name,
-      u.avatar_url,
-      (SELECT TOP 1 ai.image_url FROM ActivityImages ai WHERE ai.activity_id = a.activity_id) AS image_url
-    FROM Activities a
-    LEFT JOIN Users u ON a.creator_id = u.user_id
-    WHERE a.status IN ('approved', 'active')
-    ORDER BY a.created_at DESC
-  `);
-  return result.recordset;
+  try {
+    const result = await pool.request().query(`
+      SELECT TOP 50
+        a.activity_id AS status_id,
+        a.creator_id AS user_id,
+        a.title AS content,
+        a.description AS extra_content,
+        a.location,
+        a.max_participants,
+        a.duration_minutes,
+        a.created_at,
+        u.username,
+        u.full_name,
+        u.avatar_url,
+        COALESCE(ai.image_url, a.image_url) AS image_url
+      FROM Activities a
+      LEFT JOIN Users u ON a.creator_id = u.user_id
+      OUTER APPLY (
+        SELECT TOP 1 image_url 
+        FROM ActivityImages 
+        WHERE activity_id = a.activity_id 
+        ORDER BY created_at DESC
+      ) ai
+      WHERE a.status = 'active'
+      ORDER BY a.created_at DESC
+    `);
+    return result.recordset;
+  } catch (error) {
+    console.error('getApprovedActivities MODEL ERROR:', error.message);
+    throw error;
+  }
 };
 
 const getActivityById = async (activityId) => {
@@ -133,15 +144,16 @@ const approveActivityRequest = async (requestId) => {
   return result.recordset[0];
 };
 
-const rejectActivityRequest = async (requestId) => {
+const deleteActivity = async (activityId, userId) => {
   const pool = getPool();
   const result = await pool.request()
-    .input('id', sql.Int, requestId)
+    .input('activityId', sql.Int, activityId)
+    .input('userId', sql.Int, userId)
     .query(`
-      UPDATE ActivityRequests 
-      SET status = 'rejected' 
-      OUTPUT INSERTED.activity_id, INSERTED.requester_id
-      WHERE request_id = @id AND status = 'pending'
+      UPDATE Activities 
+      SET status = 'deleted' 
+      OUTPUT INSERTED.activity_id
+      WHERE activity_id = @activityId AND creator_id = @userId AND status = 'active'
     `);
   return result.recordset[0];
 };
@@ -157,4 +169,5 @@ module.exports = {
   approveActivityRequest,
   getRequestsToApprove,
   rejectActivityRequest
+  deleteActivity
 };

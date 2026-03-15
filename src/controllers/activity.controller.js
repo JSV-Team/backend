@@ -76,13 +76,26 @@ const approveActivityRequest = asyncHandler(async (req, res) => {
     }
 });
 
-const rejectActivityRequest = asyncHandler(async (req, res) => {
+const deleteActivity = asyncHandler(async (req, res) => {
+    const activityId = parseInt(req.params.id);
+    const userId = req.body.userId || parseInt(req.query.userId);
+
+    console.log(`[DEBUG] Attempting to delete activity: ID=${activityId}, UserID=${userId}`);
+
     try {
-        const requestId = parseInt(req.params.id);
-        const data = await activityService.rejectActivityRequest(requestId);
-        res.json({ message: 'Đã từ chối yêu cầu.', data });
+        if (!userId) {
+            console.log('[DEBUG] No userId provided in request');
+            return res.status(401).json({ message: 'Không xác định được user' });
+        }
+
+        const result = await activityService.deleteActivity(activityId, userId);
+        console.log('[DEBUG] Deletion successful for ID:', activityId);
+        res.json({ message: 'Xóa bài viết thành công' });
     } catch (error) {
-        console.error('Lỗi khi từ chối yêu cầu:', error);
+        console.error('[DEBUG] Error in deleteActivity controller:', error);
+        if (error.message.includes('không tồn tại hoặc bạn không có quyền xóa')) {
+            return res.status(403).json({ message: error.message });
+        }
         res.status(500).json({ message: error.message || 'Lỗi Server' });
     }
 });
@@ -95,4 +108,5 @@ module.exports = {
     approveActivityRequest,
     getPendingApprovals,
     rejectActivityRequest
+    deleteActivity
 };

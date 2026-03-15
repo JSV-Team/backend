@@ -18,8 +18,15 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // Debug middleware - LOG ALL REQUESTS FIRST
+// Auth routes
+const authRoutes = require("./routes/auth.routes");
+app.use("/api/auth", authRoutes);
+
+// Debug middleware - LOG ALL REQUESTS
 app.use((req, res, next) => {
-  const msg = `\n[${new Date().toISOString()}] ${req.method} ${req.path} - Body: ${JSON.stringify(req.body)}\n`;
+  const hasBody = ['POST', 'PUT', 'PATCH'].includes(req.method);
+  const bodyStr = hasBody ? ` - Body: ${JSON.stringify(req.body)}` : '';
+  const msg = `\n[${new Date().toISOString()}] ${req.method} ${req.path}${bodyStr}\n`;
   console.log(msg);
   logFile.write(msg);
   next();
@@ -27,6 +34,7 @@ app.use((req, res, next) => {
 
 // Routes
 app.use('/api', routes);
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // Root route
 app.get('/', (req, res) => {
@@ -43,6 +51,15 @@ app.use((err, req, res, next) => {
   const msg = `\n[ERROR] ${err.message}\n${err.stack}\n`;
   console.error(msg);
   logFile.write(msg);
+  
+  // Xử lý multer errors
+  if (err.name === 'MulterError') {
+    return res.status(400).json({
+      message: err.message || 'Lỗi upload file',
+      error: process.env.NODE_ENV === 'development' ? err.toString() : undefined
+    });
+  }
+
   res.status(err.status || 500).json({
     message: err.message || 'Internal Server Error',
     error: process.env.NODE_ENV === 'development' ? err.toString() : undefined

@@ -71,19 +71,17 @@ const approveActivityRequest = async (requestId) => {
     return requestData;
 };
 
-// Gọi khi host bấm Reject Request
-const rejectActivityRequest = async (requestId) => {
-    const requestData = await activityModel.rejectActivityRequest(requestId);
-    if (!requestData) {
-        throw new Error('Không tìm thấy yêu cầu hoặc yêu cầu đã được xử lý');
+const deleteActivity = async (activityId, userId) => {
+    if (!activityId || !userId) {
+        throw new Error('activityId và userId là bắt buộc');
     }
 
-    const activityResult = await activityModel.getActivityById(requestData.activity_id);
-    if (activityResult && activityResult.length > 0) {
-        const content = `Yêu cầu tham gia hoạt động "${activityResult[0].title}" của bạn đã bị từ chối.`;
-        await notificationService.createNotification(requestData.requester_id, 'system', content, requestData.activity_id);
+    const result = await activityModel.deleteActivity(activityId, userId);
+    if (!result) {
+        throw new Error('Hoạt động không tồn tại hoặc bạn không có quyền xóa');
     }
-    return requestData;
+
+    return result;
 };
 
 module.exports = {
@@ -94,4 +92,5 @@ module.exports = {
     approveActivityRequest,
     getPendingApprovals,
     rejectActivityRequest
+    deleteActivity
 };
