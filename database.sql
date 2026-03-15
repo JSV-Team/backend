@@ -27,6 +27,8 @@ CREATE TABLE Users (
     avatar_url       NVARCHAR(500) NULL,
     bio              NVARCHAR(MAX) NULL,
     location         NVARCHAR(100) NULL,
+    gender           NVARCHAR(10)  NULL,
+    dob              DATE          NULL,
 
     reputation_score INT           NOT NULL CONSTRAINT DF_Users_Reputation   DEFAULT 100,
 

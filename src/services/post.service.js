@@ -1,5 +1,6 @@
 const postModel = require('../models/post.model');
 const bannedKeywordModel = require('../models/bannedKeyword.model');
+const { checkBannedKeywords } = require('../utils/filter');
 
 /**
  * Service - Chứa business logic
@@ -9,14 +10,11 @@ const bannedKeywordModel = require('../models/bannedKeyword.model');
 const createPost = async (content, userId, imageUrl = null, additionalData = {}) => {
   try {
     // Check for banned keywords
-    let textToCheck = (content || '') + ' ' + (additionalData.description || '') + ' ' + (additionalData.location || '');
-    textToCheck = textToCheck.toLowerCase();
+    const textToCheck = (content || '') + ' ' + (additionalData.description || '') + ' ' + (additionalData.location || '');
+    const bannedWord = await checkBannedKeywords(textToCheck);
 
-    const bannedKeywords = await bannedKeywordModel.getAllBannedKeywords();
-    const foundBannedWord = bannedKeywords.find(keyword => keyword && textToCheck.includes(keyword.toLowerCase()));
-
-    if (foundBannedWord) {
-      throw new Error('Vi phạm từ ngữ đăng bài');
+    if (bannedWord) {
+      throw new Error(`Nội dung chứa từ khóa không phù hợp: "${bannedWord}"`);
     }
 
     // Gọi Model để insert bài viết (Activities table)
