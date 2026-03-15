@@ -84,12 +84,22 @@ const deleteActivity = async (activityId, userId) => {
     return result;
 };
 
+const rejectActivityRequest = async (requestId) => {
+    if (!requestId) throw new Error('Yêu cầu không hợp lệ');
+    const requestData = await activityModel.rejectActivityRequest(requestId);
+    if (!requestData) {
+        throw new Error('Yêu cầu không tồn tại hoặc đã được xử lý');
+    }
+    return requestData;
+};
+
 module.exports = {
     getPendingActivities,
     deleteActivityRequest,
     getApprovedActivities,
     joinActivity,
     approveActivityRequest,
-    getPendingApprovals
-
+    rejectActivityRequest,
+    getPendingApprovals,
+    deleteActivity
 };
