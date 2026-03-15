@@ -3,12 +3,12 @@ const router = express.Router();
 const activityController = require('../controllers/activity.controller');
 
 // =============================================
-// GET /api/pending-activities?userId=X
+// GET /api/activities/pending-activities?userId=X
 // =============================================
 router.get('/pending-activities', activityController.getPendingActivities);
 
 // =============================================
-// DELETE /api/pending-activities/:id
+// DELETE /api/activities/pending-activities/:id
 // =============================================
 router.delete('/pending-activities/:id', activityController.deleteActivityRequest);
 
@@ -19,6 +19,7 @@ router.get('/pending-approvals', activityController.getPendingApprovals);
 
 // =============================================
 // PATCH /api/pending-activities/:id/approve
+// PATCH /api/activities/pending-activities/:id/approve
 // =============================================
 router.patch('/pending-activities/:id/approve', activityController.approveActivityRequest);
 
@@ -30,22 +31,23 @@ router.patch('/pending-activities/:id/reject', activityController.rejectActivity
 // =============================================
 // GET /api/activities
 // =============================================
-router.get('/activities', activityController.getActivities);
+router.get('/', activityController.getActivities);
 
 // =============================================
 // POST /api/activities
 // =============================================
-router.post('/activities', activityController.createActivity);
+router.post('/', activityController.createActivity);
 
 // =============================================
 // POST /api/activities/join
 // =============================================
-router.post('/activities/join', activityController.joinActivity);
+router.post('/join', activityController.joinActivity);
 // =============================================
 // DELETE /api/activities/:id
 // =============================================
-router.delete('/activities/:id', activityController.deleteActivity);
+router.delete('/:id', activityController.deleteActivity);
 
 router.get('/test-route', (req, res) => res.json({ message: 'Route is active' }));
 
 module.exports = router;
+

@@ -1,23 +1,30 @@
 const express = require('express');
 const router = express.Router();
 
-
-const postRoutes = require('./post.route');
+// Import routes
 const activityRoutes = require('./activity.route');
+const postsRoutes = require('./posts.routes');
+const profileRoutes = require('./profile.routes');
+const usersRoutes = require('./users.routes');
+const reputationRoutes = require('./reputation.routes');
 const notificationRoutes = require('./notification.route');
-const loginRoutes = require('./login.route');
-// mount sub‑routers
+const authRoutes = require('./auth.routes');
 const chatRoutes = require('./chat.route');
+const loginRoutes = require('./login.route');
 const uploadRoutes = require('./upload.route');
 const matchRoutes = require('./match.route');
 
-
-router.use('/posts', postRoutes);
-router.use('/', activityRoutes);    // activityRoutes define their own paths (e.g. /activities)
+// Register routes
+router.use('/profile', profileRoutes);
+router.use('/users', usersRoutes);
+router.use('/reputation', reputationRoutes);
 router.use('/notifications', notificationRoutes);
 router.use('/login', loginRoutes);
-router.use('/chat', chatRoutes);
+router.use('/posts', postsRoutes);
+router.use('/activities', activityRoutes);
 router.use('/upload', uploadRoutes);
+router.use('/chat', chatRoutes);
+router.use('/auth', authRoutes);
 router.use('/match', matchRoutes);
 
 module.exports = router;
