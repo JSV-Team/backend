@@ -27,7 +27,8 @@ const handleLogin = async (req, res) => {
         return res.status(200).json({
             success: true,
             message: "Đăng nhập thành công!",
-            data: result.user
+            data: result.user,
+            token: result.token
         });
 
     } catch (error) {
