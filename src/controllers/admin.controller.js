@@ -502,5 +502,6 @@ module.exports = {
     updateActivityStatus, 
     getAllReports, 
     updateReportStatus,
-    getDetailedStatistics 
+    getDetailedStatistics,
+    searchAdmin
 };
