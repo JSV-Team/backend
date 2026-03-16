@@ -70,7 +70,7 @@ const getApprovedActivities = async () => {
       u.username,
       u.full_name,
       u.avatar_url,
-      COALESCE(ai.image_url, a.image_url) AS image_url
+      COALESCE(ai.image_url, NULL) AS image_url
     FROM Activities a
     LEFT JOIN Users u ON a.creator_id = u.user_id
     LEFT JOIN (

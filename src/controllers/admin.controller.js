@@ -73,20 +73,20 @@ const getAdminStats = async (req, res) => {
 
         // 3. Reports by Reason
         const reportsByTypeQuery = `
-            SELECT TOP 4 reason as name, CAST(COUNT(*) AS INT) as value FROM Reports GROUP BY reason ORDER BY value DESC
+            SELECT TOP 4 reason as name, CAST(COUNT(*) AS INT) as value FROM Reports GROUP BY reason ORDER BY COUNT(*) DESC
         `;
         const reportsByType = await pool.request().query(reportsByTypeQuery);
         let reportData = reportsByType.recordset;
 
         // 4. Recent Activities
         const recentQuery = `
-            SELECT TOP 8 * FROM (
+SELECT TOP 8 * FROM (
                 SELECT full_name as [user], N'đã tham gia hệ thống' as action, created_at, '#3b82f6' as dotColor FROM Users
                 UNION ALL
                 SELECT u.full_name, N'đã tạo bài viết mới: ' + a.title, a.created_at, '#10b981' 
                 FROM Activities a JOIN Users u ON a.creator_id = u.user_id
                 UNION ALL
-                SELECT u.full_name, N'đã báo cáo vi phạm', r.reported_at, '#ef4444' 
+                SELECT u.full_name, N'đã báo cáo vi phạm', r.created_at, '#ef4444' 
                 FROM Reports r JOIN Users u ON r.reporter_id = u.user_id
             ) AS combined
             ORDER BY created_at DESC
