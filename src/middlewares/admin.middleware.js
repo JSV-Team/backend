@@ -1,18 +1,38 @@
-const sql = require('mssql');
+const jwt = require('jsonwebtoken');
 
 const isAdmin = (req, res, next) => {
-    // Current dummy auth middleware in profile.routes.js uses x-auth-user-id
-    // We will implement a slightly more robust one here or use what's available
-    
-    const role = req.headers['x-auth-user-role'];
-    
-    if (role === 'admin') {
-        next();
-    } else {
-        res.status(403).json({
-            success: false,
-            message: "Truy cập bị từ chối. Bạn không có quyền admin."
+    try {
+        const authHeader = req.headers['authorization'];
+        const token = authHeader && authHeader.split(' ')[1];
+
+        if (!token) {
+            return res.status(401).json({
+                success: false,
+                message: "Bạn cần đăng nhập để truy cập."
+            });
+        }
+
+        jwt.verify(token, process.env.JWT_SECRET || 'super_secret_key_admin_vibematch', (err, user) => {
+            if (err) {
+                return res.status(403).json({
+                    success: false,
+                    message: "Phiên đăng nhập không hợp lệ hoặc đã hết hạn."
+                });
+            }
+
+            if (user.role === 'admin') {
+                req.user = user;
+                next();
+            } else {
+                res.status(403).json({
+                    success: false,
+                    message: "Truy cập bị từ chối. Bạn không có quyền admin."
+                });
+            }
         });
+    } catch (error) {
+        console.error("isAdmin Middleware Error:", error);
+        res.status(500).json({ success: false, message: "Lỗi hệ thống trong quá trình xác thực." });
     }
 };
 
