@@ -14,6 +14,9 @@ const verifyUser = async (identifier, password) => {
     `);
 
     const user = result.recordset[0];
+    console.log("LOGIN ATTEMPT - Identifier:", identifier);
+    console.log("USER FOUND - Username:", user?.username, "Hash in DB:", user?.password_hash);
+
     if (!user) {
         return { success: false, message: "Tài khoản hoặc mật khẩu không chính xác!" };
     }
@@ -25,6 +28,7 @@ const verifyUser = async (identifier, password) => {
 
     // So sánh mật khẩu
     const isMatch = await bcrypt.compare(password, user.password_hash);
+    console.log("BCRYPT MATCH RESULT:", isMatch);
     
     if (!isMatch) {
         return { success: false, message: "Tài khoản hoặc mật khẩu không chính xác!" };
