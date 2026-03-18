@@ -1,95 +1,93 @@
-const { getPool, sql } = require("../config/db");
+const { getPool } = require("../config/db");
 
 // Lấy profile của user
 exports.getUserProfile = async (userId) => {
-  const pool = await getPool();
-  const r = await pool.request()
-    .input("userId", sql.Int, userId)
-    .query(`
+  const pool = getPool();
+  const query = `
       SELECT user_id, username, full_name, email, avatar_url, bio, location,
              reputation_score, created_at
-      FROM Users WHERE user_id=@userId
-    `);
+      FROM Users WHERE user_id = $1
+    `;
+  const r = await pool.query(query, [userId]);
 
-  if (!r.recordset[0]) throw Object.assign(new Error("User not found"), { status: 404 });
-  return r.recordset[0];
+  if (r.rows.length === 0) throw Object.assign(new Error("User not found"), { status: 404 });
+  return r.rows[0];
 };
 
 // Cập nhật profile
 exports.updateUserProfile = async (userId, payload) => {
-  const pool = await getPool();
+  const pool = getPool();
   const { full_name, avatar_url, bio, location } = payload;
 
-  await pool.request()
-    .input("userId", sql.Int, userId)
-    .input("full_name", sql.NVarChar(100), full_name ?? null)
-    .input("avatar_url", sql.NVarChar(500), avatar_url ?? null)
-    .input("bio", sql.NVarChar(sql.MAX), bio ?? null)
-    .input("location", sql.NVarChar(100), location ?? null)
-    .query(`
+  const query = `
       UPDATE Users
-      SET full_name=@full_name, avatar_url=@avatar_url, bio=@bio, location=@location
-      WHERE user_id=@userId
-    `);
+      SET full_name = $1, avatar_url = $2, bio = $3, location = $4
+      WHERE user_id = $5
+    `;
+  await pool.query(query, [
+    full_name ?? null,
+    avatar_url ?? null,
+    bio ?? null,
+    location ?? null,
+    userId
+  ]);
 
-  return this.getUserProfile(userId);
+  return exports.getUserProfile(userId);
 };
 
 // Lấy danh sách sở thích của user
 exports.getUserInterests = async (userId) => {
-  const pool = await getPool();
-  const r = await pool.request()
-    .input("userId", sql.Int, userId)
-    .query(`
+  const pool = getPool();
+  const query = `
       SELECT i.interest_id, i.name
       FROM UserInterests ui
       JOIN Interests i ON i.interest_id = ui.interest_id
-      WHERE ui.user_id=@userId
+      WHERE ui.user_id = $1
       ORDER BY i.name
-    `);
-  return r.recordset;
+    `;
+  const r = await pool.query(query, [userId]);
+  return r.rows;
 };
 
 // Cập nhật sở thích
 exports.updateUserInterests = async (userId, interests) => {
-  const pool = await getPool();
-  const tx = new sql.Transaction(pool);
+  const pool = getPool();
+  const client = await pool.connect();
 
   const clean = [...new Set((interests || []).map(x => String(x).trim()).filter(Boolean))];
 
-  await tx.begin();
   try {
+    await client.query('BEGIN');
+
     // Xóa hết interests cũ
-    await new sql.Request(tx)
-      .input("userId", sql.Int, userId)
-      .query(`DELETE FROM UserInterests WHERE user_id=@userId`);
+    await client.query(`DELETE FROM UserInterests WHERE user_id = $1`, [userId]);
 
     for (const name of clean) {
       // Upsert interest
-      const ins = await new sql.Request(tx)
-        .input("name", sql.NVarChar(100), name)
-        .query(`
-          MERGE Interests AS t
-          USING (SELECT @name AS name) AS s
-          ON t.name=s.name
-          WHEN NOT MATCHED THEN INSERT(name) VALUES(s.name)
-          OUTPUT inserted.interest_id;
-        `);
+      const insResult = await client.query(`
+        INSERT INTO Interests (name) 
+        VALUES ($1)
+        ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name
+        RETURNING interest_id;
+      `, [name]);
 
-      const interestId = ins.recordset[0]?.interest_id;
+      const interestId = insResult.rows[0]?.interest_id;
       if (!interestId) continue;
 
-      await new sql.Request(tx)
-        .input("userId", sql.Int, userId)
-        .input("interestId", sql.Int, interestId)
-        .query(`INSERT INTO UserInterests(user_id, interest_id) VALUES(@userId, @interestId)`);
+      await client.query(
+        `INSERT INTO UserInterests(user_id, interest_id) VALUES($1, $2) ON CONFLICT DO NOTHING`, 
+        [userId, interestId]
+      );
     }
 
-    await tx.commit();
-    return this.getUserInterests(userId);
+    await client.query('COMMIT');
+    return exports.getUserInterests(userId);
   } catch (e) {
-    await tx.rollback();
+    await client.query('ROLLBACK');
     throw e;
+  } finally {
+    client.release();
   }
 };
+
 

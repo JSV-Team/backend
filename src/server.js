@@ -64,11 +64,9 @@ const startServer = async () => {
     // Auto-patch Database Constraint for 'private' chat types
     try {
       const { getPool } = require('./config/db');
-      await getPool().request().query(`
-        IF EXISTS (SELECT 1 FROM sys.check_constraints WHERE name = 'CHK_Conversation_Type')
-        BEGIN
-            ALTER TABLE Conversations DROP CONSTRAINT CHK_Conversation_Type;
-        END
+      const pool = getPool();
+      await pool.query(`
+        ALTER TABLE Conversations DROP CONSTRAINT IF EXISTS CHK_Conversation_Type;
         ALTER TABLE Conversations ADD CONSTRAINT CHK_Conversation_Type CHECK (conversation_type IN ('direct', 'group', 'activity', 'private'));
       `);
       console.log('✅ DB Constraint CHK_Conversation_Type patched for private chat');

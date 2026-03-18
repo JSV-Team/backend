@@ -33,11 +33,20 @@ const getMembers = asyncHandler(async (req, res) => {
 });
 
 const getOrInitPrivateChat = asyncHandler(async (req, res) => {
-    const { partnerId } = req.body;
+    const { partnerId, activityId } = req.body;
     const userId = req.body.userId || 2; // CURRENT_USER_ID, nên lấy từ token
 
     if (!partnerId) {
         return res.status(400).json({ message: "Thiếu partnerId" });
+    }
+
+    // Nếu có activityId, kiểm tra request đã được accepted chưa
+    if (activityId) {
+        try {
+            await chatService.canMessageActivityHost(activityId, userId);
+        } catch (error) {
+            return res.status(403).json({ message: error.message });
+        }
     }
 
     try {
@@ -48,10 +57,38 @@ const getOrInitPrivateChat = asyncHandler(async (req, res) => {
     }
 });
 
+// Kiểm tra user có thể nhắn tin cho host của activity không
+const checkCanMessageHost = asyncHandler(async (req, res) => {
+    const { activityId } = req.body;
+    const userId = req.body.userId || 2;
+
+    if (!activityId) {
+        return res.status(400).json({ message: "Thiếu activityId" });
+    }
+
+    try {
+        await chatService.canMessageActivityHost(activityId, userId);
+        res.json({ canMessage: true });
+    } catch (error) {
+        res.status(403).json({ canMessage: false, message: error.message });
+    }
+});
+
+// Logic riêng để dùng trong route kiểm tra activity request
+const getOrInitPrivateChatLogic = async (userId, partnerId, activityId = null) => {
+    // Nếu có activityId, kiểm tra request đã được accepted chưa
+    if (activityId) {
+        await chatService.canMessageActivityHost(activityId, userId);
+    }
+    return await chatService.getOrInitPrivateConversation(userId, partnerId);
+};
+
 module.exports = {
     getConversations,
     getMessages,
     leaveGroup,
     getMembers,
-    getOrInitPrivateChat
+    getOrInitPrivateChat,
+    getOrInitPrivateChatLogic,
+    checkCanMessageHost
 };

@@ -1,14 +1,10 @@
 const { getPool } = require('../config/db');
-const sql = require('mssql');
 
 const getNotificationsByUserId = async (userId, limit = 50) => {
     try {
         const pool = getPool();
-        const result = await pool.request()
-            .input('userId', sql.Int, userId)
-            .input('limit', sql.Int, limit)
-            .query(`
-      SELECT TOP (@limit)
+        const query = `
+      SELECT
         notification_id,
         user_id,
         type,
@@ -16,12 +12,14 @@ const getNotificationsByUserId = async (userId, limit = 50) => {
         content,
         is_read,
         created_at
-      FROM Notifications
-      WHERE user_id = @userId
+      FROM notifications
+      WHERE user_id = $1
       ORDER BY created_at DESC
-    `);
-        console.log(`📬 getNotificationsByUserId for userId=${userId}: Found ${result.recordset.length} records`);
-        return result.recordset;
+      LIMIT $2
+    `;
+        const result = await pool.query(query, [userId, limit]);
+        console.log(`📬 getNotificationsByUserId for userId=${userId}: Found ${result.rows.length} records`);
+        return result.rows;
     } catch (error) {
         console.error('❌ Error in getNotificationsByUserId:', error.message);
         throw error;
@@ -31,14 +29,13 @@ const getNotificationsByUserId = async (userId, limit = 50) => {
 const getUnreadCount = async (userId) => {
     try {
         const pool = getPool();
-        const result = await pool.request()
-            .input('userId', sql.Int, userId)
-            .query(`
+        const query = `
       SELECT COUNT(*) as count
-      FROM Notifications
-      WHERE user_id = @userId AND is_read = 0
-    `);
-        const count = result.recordset && result.recordset.length > 0 ? result.recordset[0].count : 0;
+      FROM notifications
+      WHERE user_id = $1 AND is_read = false
+    `;
+        const result = await pool.query(query, [userId]);
+        const count = result.rows && result.rows.length > 0 ? parseInt(result.rows[0].count) : 0;
         console.log(`📬 getUnreadCount for userId=${userId}: ${count} unread`);
         return count;
     } catch (error) {
@@ -49,49 +46,42 @@ const getUnreadCount = async (userId) => {
 
 const createNotification = async (userId, type, content, refId = null) => {
     const pool = getPool();
-    const result = await pool.request()
-        .input('userId', sql.Int, userId)
-        .input('type', sql.VarChar(50), type)
-        .input('content', sql.NVarChar(500), content)
-        .input('refId', sql.Int, refId)
-        .query(`
-      INSERT INTO Notifications (user_id, type, content, ref_id, is_read, created_at)
-      VALUES (@userId, @type, @content, @refId, 0, SYSDATETIME());
-      SELECT SCOPE_IDENTITY() AS notification_id;
-    `);
-    return result.recordset[0].notification_id;
+    const query = `
+      INSERT INTO notifications (user_id, type, content, ref_id, is_read, created_at)
+      VALUES ($1, $2, $3, $4, false, NOW())
+      RETURNING notification_id;
+    `;
+    const result = await pool.query(query, [userId, type, content, refId]);
+    return result.rows[0].notification_id;
 };
 
 const markAsRead = async (notificationId) => {
     const pool = getPool();
-    await pool.request()
-        .input('notificationId', sql.Int, notificationId)
-        .query(`
-      UPDATE Notifications
-      SET is_read = 1
-      WHERE notification_id = @notificationId
-    `);
+    const query = `
+      UPDATE notifications
+      SET is_read = true
+      WHERE notification_id = $1
+    `;
+    await pool.query(query, [notificationId]);
 };
 
 const markAllAsRead = async (userId) => {
     const pool = getPool();
-    await pool.request()
-        .input('userId', sql.Int, userId)
-        .query(`
-      UPDATE Notifications
-      SET is_read = 1
-      WHERE user_id = @userId AND is_read = 0
-    `);
+    const query = `
+      UPDATE notifications
+      SET is_read = true
+      WHERE user_id = $1 AND is_read = false
+    `;
+    await pool.query(query, [userId]);
 };
 
 const deleteNotification = async (notificationId) => {
     const pool = getPool();
-    await pool.request()
-        .input('notificationId', sql.Int, notificationId)
-        .query(`
-      DELETE FROM Notifications
-      WHERE notification_id = @notificationId
-    `);
+    const query = `
+      DELETE FROM notifications
+      WHERE notification_id = $1
+    `;
+    await pool.query(query, [notificationId]);
 };
 
 module.exports = {
@@ -102,3 +92,4 @@ module.exports = {
     markAllAsRead,
     deleteNotification
 };
+
