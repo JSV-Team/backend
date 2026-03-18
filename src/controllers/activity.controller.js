@@ -113,6 +113,18 @@ const deleteActivity = asyncHandler(async (req, res) => {
     }
 });
 
+const getUserActivities = asyncHandler(async (req, res) => {
+    try {
+        const userId = parseInt(req.params.userId);
+        if (!userId) return res.status(400).json({ message: 'Thiếu userId' });
+        const result = await activityService.getUserActivities(userId);
+        res.json(result);
+    } catch (error) {
+        console.error('Lỗi khi lấy user activities:', error);
+        res.status(500).json({ message: 'Lỗi Server' });
+    }
+});
+
 module.exports = {
     getPendingActivities,
     deleteActivityRequest,
@@ -121,5 +133,6 @@ module.exports = {
     approveActivityRequest,
     rejectActivityRequest,
     getPendingApprovals,
-    deleteActivity
+    deleteActivity,
+    getUserActivities
 };

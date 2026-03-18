@@ -103,3 +103,86 @@ exports.updateInterests = async (userId, interests) => {
   }
 };
 
+// Lấy thống kê theo dõi
+exports.getFollowStats = async (userId) => {
+  const pool = await getPool();
+  const r = await pool.request()
+    .input("userId", mssql.Int, userId)
+    .query(`
+      SELECT 
+        (SELECT COUNT(*) FROM Follows WHERE following_id=@userId) AS followers_count,
+        (SELECT COUNT(*) FROM Follows WHERE follower_id=@userId) AS following_count
+    `);
+  return r.recordset[0];
+};
+
+// Lấy danh sách người theo dõi chung (A and B both follow X)
+exports.getMutualFollowers = async (myId, targetId) => {
+  const pool = await getPool();
+  if (!myId || !targetId) return [];
+  
+  const r = await pool.request()
+    .input("myId", mssql.Int, myId)
+    .input("targetId", mssql.Int, targetId)
+    .query(`
+      SELECT u.user_id, u.username, u.full_name, u.avatar_url
+      FROM Users u
+      WHERE u.user_id IN (
+        SELECT following_id FROM Follows WHERE follower_id = @myId
+        INTERSECT
+        SELECT following_id FROM Follows WHERE follower_id = @targetId
+      )
+    `);
+  return r.recordset;
+};
+
+// Kiểm tra xem user có DailyStatus (Story) đang hoạt động không
+exports.hasActiveStory = async (userId) => {
+  const pool = await getPool();
+  const r = await pool.request()
+    .input("userId", mssql.Int, userId)
+    .query(`
+      SELECT 1 FROM DailyStatus 
+      WHERE user_id=@userId AND expires_at > SYSDATETIME()
+    `);
+  return r.recordset.length > 0;
+};
+
+// Theo dõi một người dùng
+exports.followUser = async (myId, targetId) => {
+  console.log(`>>> [SERVICE] followUser - myId: ${myId}, targetId: ${targetId}`);
+  const pool = await getPool();
+  if (myId === targetId) throw Object.assign(new Error("Cannot follow yourself"), { status: 400 });
+  
+  await pool.request()
+    .input("myId", mssql.Int, myId)
+    .input("targetId", mssql.Int, targetId)
+    .query(`
+      IF NOT EXISTS (SELECT 1 FROM Follows WHERE follower_id=@myId AND following_id=@targetId)
+        INSERT INTO Follows (follower_id, following_id, created_at)
+        VALUES (@myId, @targetId, SYSDATETIME())
+    `);
+  return { ok: true };
+};
+
+// Bỏ theo dõi một người dùng
+exports.unfollowUser = async (myId, targetId) => {
+  const pool = await getPool();
+  await pool.request()
+    .input("myId", mssql.Int, myId)
+    .input("targetId", mssql.Int, targetId)
+    .query(`DELETE FROM Follows WHERE follower_id=@myId AND following_id=@targetId`);
+  return { ok: true };
+};
+
+// Kiểm tra xem đã theo dõi chưa
+exports.isFollowing = async (myId, targetId) => {
+  const pool = await getPool();
+  if (!myId || !targetId) return false;
+  const r = await pool.request()
+    .input("myId", mssql.Int, myId)
+    .input("targetId", mssql.Int, targetId)
+    .query(`SELECT 1 FROM Follows WHERE follower_id=@myId AND following_id=@targetId`);
+  return r.recordset.length > 0;
+};
+

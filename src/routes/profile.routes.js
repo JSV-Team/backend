@@ -8,8 +8,9 @@ const authMiddleware = (req, res, next) => {
     // Trong production, đây sẽ là JWT verification middleware
     // Hiện tại lấy user_id từ header x-auth-user-id
     const userId = req.headers['x-auth-user-id'] || req.query.userId;
-    
+    console.log(`>>> [PROFILE AUTH] Header ID: ${userId}`);
     if (!userId) {
+        console.log("!!! [PROFILE AUTH] MISSING ID");
         return res.status(401).json({
             success: false,
             message: "Vui lòng đăng nhập để tiếp tục"
@@ -50,10 +51,18 @@ router.get('/:userId', profileController.getPublicProfile);
 // @access  Public
 router.get('/:userId/interests', profileController.getInterests);
 
-// @route   PUT /api/profile/:userId
-// @desc    Cập nhật thông tin profile của user bất kỳ
-// @access  Public (có thể bỏ auth nếu cần)
-router.put('/:userId', profileController.updateProfileById);
+// @route   POST /api/profile/:userId/follow
+// @desc    Theo dõi người dùng
+// @access  Private
+router.post('/:userId/follow', (req, res, next) => {
+    console.log(`>>> [ROUTE] HIT POST /api/profile/${req.params.userId}/follow`);
+    next();
+}, authMiddleware, profileController.followUser);
+
+// @route   DELETE /api/profile/:userId/unfollow
+// @desc    Bỏ theo dõi người dùng
+// @access  Private
+router.delete('/:userId/unfollow', authMiddleware, profileController.unfollowUser);
 
 module.exports = router;
 

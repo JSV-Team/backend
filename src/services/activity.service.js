@@ -93,6 +93,10 @@ const rejectActivityRequest = async (requestId) => {
     return requestData;
 };
 
+const getUserActivities = async (userId) => {
+    return await activityModel.getUserActivities(userId);
+};
+
 module.exports = {
     getPendingActivities,
     deleteActivityRequest,
@@ -101,5 +105,6 @@ module.exports = {
     approveActivityRequest,
     rejectActivityRequest,
     getPendingApprovals,
-    deleteActivity
+    deleteActivity,
+    getUserActivities
 };

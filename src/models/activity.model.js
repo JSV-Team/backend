@@ -167,6 +167,41 @@ const rejectActivityRequest = async (requestId) => {
   return result.recordset[0];
 };
 
+const getUserActivities = async (userId) => {
+  const pool = getPool();
+  const result = await pool.request()
+    .input('userId', sql.Int, userId)
+    .query(`
+      SELECT DISTINCT
+        a.activity_id AS status_id,
+        a.creator_id AS user_id,
+        a.title AS content,
+        a.description AS extra_content,
+        a.location,
+        a.max_participants,
+        a.duration_minutes,
+        a.created_at,
+        u.username,
+        u.full_name,
+        u.avatar_url,
+        ai.image_url AS image_url,
+        (SELECT COUNT(*) FROM ActivityRequests WHERE activity_id = a.activity_id AND status = 'accepted') AS participant_count
+      FROM Activities a
+      LEFT JOIN Users u ON a.creator_id = u.user_id
+      LEFT JOIN (
+          SELECT activity_id, image_url,
+                 ROW_NUMBER() OVER (PARTITION BY activity_id ORDER BY is_thumbnail DESC, image_id ASC) as rn
+          FROM ActivityImages
+      ) ai ON a.activity_id = ai.activity_id AND ai.rn = 1
+      WHERE (a.creator_id = @userId OR a.activity_id IN (
+          SELECT activity_id FROM ActivityRequests WHERE requester_id = @userId AND status = 'accepted'
+      ))
+      AND a.status IN ('active', 'approved')
+      ORDER BY a.created_at DESC
+    `);
+  return result.recordset;
+};
+
 module.exports = {
   getPendingActivities,
   deleteActivityRequest,
@@ -178,5 +213,6 @@ module.exports = {
   approveActivityRequest,
   rejectActivityRequest,
   getRequestsToApprove,
-  deleteActivity
+  deleteActivity,
+  getUserActivities
 };
