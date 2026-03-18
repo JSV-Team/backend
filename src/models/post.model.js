@@ -16,12 +16,20 @@ const insertPost = async (userId, content, imageUrl = null, additionalData = {})
       .input('duration', sql.Int, duration)
       .input('imageUrl', sql.NVarChar(1000), imageUrl || null)
       .query(`
-        INSERT INTO Activities (creator_id, title, description, location, max_participants, duration_minutes, image_url, status, created_at)
-        VALUES (@creatorId, @title, @description, @location, @maxParticipants, @duration, @imageUrl, 'approved', SYSDATETIME());
+        INSERT INTO Activities (creator_id, title, description, location, max_participants, duration_minutes, status, created_at)
+        VALUES (@creatorId, @title, @description, @location, @maxParticipants, @duration, 'approved', SYSDATETIME());
         SELECT SCOPE_IDENTITY() AS activity_id;
       `);
 
     const activityId = result.recordset[0].activity_id;
+
+    if (imageUrl) {
+      await pool.request()
+        .input('activityId', sql.Int, activityId)
+        .input('imageUrl', sql.NVarChar(1000), imageUrl)
+        .query(`INSERT INTO ActivityImages (activity_id, image_url, is_thumbnail) VALUES (@activityId, @imageUrl, 1)`);
+    }
+
     console.log('Post created with ID:', activityId, '| image saved to ActivityImages:', imageUrl);
     return activityId;
   } catch (error) {
@@ -45,7 +53,8 @@ const getPostById = async (activityId) => {
           a.location,
           a.max_participants,
           a.created_at,
-          COALESCE(ai.image_url, a.image_url) AS image_url,
+          ai.image_url,
+
           u.username,
           u.full_name,
           u.avatar_url
@@ -77,7 +86,8 @@ const getAllPosts = async (limit = 50) => {
           a.max_participants,
           a.duration_minutes,
           a.created_at,
-          COALESCE(ai.image_url, a.image_url) AS image_url,
+          img.image_url,
+
           u.username,
           u.full_name,
           u.avatar_url

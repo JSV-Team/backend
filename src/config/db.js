@@ -14,11 +14,14 @@
   };
 
   const getPool = () => {
+    require('fs').appendFileSync('sql_err.log', `[${new Date().toISOString()}] getPool called. Pool exists: ${!!pool}\n`);
     if (!pool) {
+
       throw new Error("DB not connected yet");
     }
     return pool;
   };
+
 
 module.exports = {
   sql,

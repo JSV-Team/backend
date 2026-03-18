@@ -45,6 +45,8 @@ const getActivities = asyncHandler(async (req, res) => {
     }
 });
 
+
+
 const joinActivity = asyncHandler(async (req, res) => {
     const { activityId, userId } = req.body;
     try {

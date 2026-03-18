@@ -6,14 +6,33 @@ exports.listByUser = async (userId) => {
   const r = await pool.request()
     .input("userId", sql.Int, userId)
     .query(`
-      SELECT a.activity_id AS post_id, a.creator_id AS user_id, 
-             a.title AS content, a.description, a.location, 
-             a.duration_minutes, a.max_participants, a.created_at,
-             (SELECT TOP 1 image_url FROM ActivityImages WHERE activity_id = a.activity_id) AS image_url
-      FROM Activities a
-      WHERE a.creator_id=@userId
-      ORDER BY a.created_at DESC
+      SELECT post_id, user_id, content, description, location, 
+             duration_minutes, max_participants, created_at, image_url, post_type,
+             (SELECT COUNT(*) FROM PostReactions WHERE post_id = combined.post_id) AS reactions_count,
+             (SELECT COUNT(*) FROM PostComments  WHERE post_id = combined.post_id) AS comments_count,
+             (SELECT COUNT(*) FROM PostShares    WHERE post_id = combined.post_id) AS shares_count
+      FROM (
+          SELECT a.activity_id AS post_id, a.creator_id AS user_id, 
+                 a.title AS content, a.description, a.location, 
+                 a.duration_minutes, a.max_participants, a.created_at,
+                 (SELECT TOP 1 image_url FROM ActivityImages WHERE activity_id = a.activity_id) AS image_url,
+                 'activity' AS post_type
+          FROM Activities a
+          WHERE a.creator_id=@userId
+          UNION ALL
+          SELECT s.status_id AS post_id, s.user_id, 
+                 s.content, '' AS description, '' AS location, 
+                 NULL AS duration_minutes, NULL AS max_participants, s.created_at,
+                 s.image_url,
+                 'status' AS post_type
+          FROM DailyStatus s
+          WHERE s.user_id=@userId
+      ) combined
+      ORDER BY created_at DESC
     `);
+
+
+
   return r.recordset;
 };
 
@@ -202,3 +221,48 @@ exports.sharers = async (postId) => {
     `);
   return r.recordset;
 };
+
+exports.createStatus = async (userId, payload) => {
+  const pool = await getPool();
+  const { title, description, content, media = [] } = payload;
+  
+  // DailyStatus uses a single image_url. We'll take the first one if multiple are provided.
+  const imageUrl = media.length > 0 ? media[0].url : null;
+  const statusContent = title || content || description || "";
+
+  const expiresAt = new Date();
+  expiresAt.setDate(expiresAt.getDate() + 1); // Expire in 24 hours
+
+  const r = await pool.request()
+    .input("userId", sql.Int, userId)
+    .input("content", sql.NVarChar(500), statusContent)
+    .input("imageUrl", sql.NVarChar(500), imageUrl)
+    .input("expiresAt", sql.DateTime2, expiresAt)
+    .query(`
+      INSERT INTO DailyStatus (user_id, content, image_url, expires_at)
+      OUTPUT inserted.status_id
+      VALUES (@userId, @content, @imageUrl, @expiresAt)
+    `);
+  
+  return { status_id: r.recordset[0].status_id };
+};
+
+exports.deletePost = async (postId, userId) => {
+  const pool = await getPool();
+  await pool.request()
+    .input("postId", sql.Int, postId)
+    .input("userId", sql.Int, userId)
+    .query("DELETE FROM Activities WHERE activity_id = @postId AND creator_id = @userId");
+  return { ok: true };
+};
+
+exports.deleteStatus = async (statusId, userId) => {
+  const pool = await getPool();
+  await pool.request()
+    .input("statusId", sql.Int, statusId)
+    .input("userId", sql.Int, userId)
+    .query("DELETE FROM DailyStatus WHERE status_id = @statusId AND user_id = @userId");
+  return { ok: true };
+};
+
+
