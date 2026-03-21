@@ -1,28 +1,13 @@
 const express = require('express');
 const cors = require('cors');
-const helmet = require('helmet');
-const rateLimit = require('express-rate-limit');
 const routes = require('./routes');
 const fs = require('fs');
 const path = require('path');
 
 const app = express();
 
-// Security Middleware
-app.use(helmet()); // Set security-related HTTP headers
+// Removed Helmet and Rate Limiting per user request
 
-// Rate Limiting: Limit requests to 100 per 15 mins
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per windowMs
-  message: {
-    success: false,
-    message: "Quá nhiều yêu cầu từ IP này, vui lòng thử lại sau 15 phút."
-  },
-  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
-  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
-});
-app.use('/api', limiter);
 
 // Setup file logging
 const logFile = fs.createWriteStream(path.join(__dirname, 'debug.log'), { flags: 'a' });
@@ -62,7 +47,7 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // Root route
 app.get('/', (req, res) => {
-  res.json({ message: 'Welcome to JSV API', version: '1.0.0', endpoints: { users: '/api/users', friends: '/api/friends', match: '/api/match', health: '/health', notifications:'/api/notifications' } });
+  res.json({ message: 'Welcome to JSV API', version: '1.0.0', endpoints: { users: '/api/users', friends: '/api/friends', match: '/api/match', health: '/health', notifications: '/api/notifications' } });
 });
 
 // Health check
@@ -75,7 +60,7 @@ app.use((err, req, res, next) => {
   const msg = `\n[ERROR] ${err.message}\n${err.stack}\n`;
   console.error(msg);
   logFile.write(msg);
-  
+
   // Xử lý multer errors
   if (err.name === 'MulterError') {
     return res.status(400).json({
