@@ -226,13 +226,48 @@ CREATE TABLE messages (
     -- msg_type = 'image'  → content = image_url
     -- msg_type = 'system' → content = nội dung hệ thống tự sinh
 
-    -- text | image | system
+    -- text | image | system | location
     msg_type        VARCHAR(20)  NOT NULL DEFAULT 'text',
     created_at      TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
 
     CONSTRAINT fk_messages_conversation FOREIGN KEY (conversation_id) REFERENCES conversations(conversation_id) ON DELETE CASCADE,
     CONSTRAINT fk_messages_sender       FOREIGN KEY (sender_id)       REFERENCES users(user_id),
-    CONSTRAINT chk_messages_type        CHECK (msg_type IN ('text', 'image', 'system'))
+    CONSTRAINT chk_messages_type        CHECK (msg_type IN ('text', 'image', 'system', 'location'))
+);
+
+-- =====================================================
+-- 8. POST INTERACTIONS – Reactions, Comments, Shares
+-- =====================================================
+
+CREATE TABLE post_reactions (
+    reaction_id SERIAL       PRIMARY KEY,
+    post_id     INT          NOT NULL,
+    user_id     INT          NOT NULL,
+    emoji       VARCHAR(50)  NOT NULL,
+    created_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    updated_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+
+    CONSTRAINT fk_post_reactions_user FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+);
+
+CREATE TABLE post_comments (
+    comment_id SERIAL       PRIMARY KEY,
+    post_id    INT          NOT NULL,
+    user_id    INT          NOT NULL,
+    content    TEXT         NOT NULL,
+    created_at TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+
+    CONSTRAINT fk_post_comments_user FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+);
+
+CREATE TABLE post_shares (
+    share_id   SERIAL       PRIMARY KEY,
+    post_id    INT          NOT NULL,
+    user_id    INT          NOT NULL,
+    created_at TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+
+    CONSTRAINT fk_post_shares_user FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+    CONSTRAINT uq_post_shares       UNIQUE (post_id, user_id)
 );
 
 
@@ -369,39 +404,39 @@ INSERT INTO users (username, email, email_verified, password_hash, full_name, av
 ('le_duc_anh',   'ducanh.le@yahoo.com',    TRUE,  '$2b$12$LXMBmKZ43J5E2ZNVQ7FXXOlat6lYPRoPJa9Smwd9hqvF5d6Cm0S4i', 'Lê Đức Anh',      'https://cdn.sothich.vn/avatars/u4.jpg',      'Lập trình viên, mê game.',         'Đà Nẵng',       210, 'active', FALSE, 'user',   'male',   '1998-11-05'),
 ('pham_thu_ha',  'thuha.pham@outlook.com', TRUE,  '$2b$12$LXMBmKZ43J5E2ZNVQ7FXXOlat6lYPRoPJa9Smwd9hqvF5d6Cm0S4i', 'Phạm Thu Hà',     'https://cdn.sothich.vn/avatars/u5.jpg',      'Đầu bếp nghiệp dư, thích nấu ăn.','Hải Phòng',     190, 'active', FALSE, 'user',   'female', '1996-05-30'),
 ('hoang_tuan',   'tuan.hoang@gmail.com',   FALSE, '$2b$12$LXMBmKZ43J5E2ZNVQ7FXXOlat6lYPRoPJa9Smwd9hqvF5d6Cm0S4i', 'Hoàng Tuấn',      NULL,                                         'Mới tham gia, đang khám phá.',     'Cần Thơ',       100, 'active', FALSE, 'user',   'male',   '2000-09-18'),
-('vo_bich_van',  'bichvan.vo@gmail.com',   TRUE,  '$2b$12$LXMBmKZ43J5E2ZNVQ7FXXOlat6lYPRoPJa9Smwd9hqvF5d6Cm0S4i', 'Võ Bích Vân',     'https://cdn.sothich.vn/avatars/u7.jpg',      'Yêu thể thao, chạy bộ mỗi sáng.', 'Hà Nội',        415, 'active', FALSE, 'user',   'female', '1994-12-01'),
-('dang_quoc_bao','quocbao.dang@gmail.com', TRUE,  '$2b$12$LXMBmKZ43J5E2ZNVQ7FXXOlat6lYPRoPJa9Smwd9hqvF5d6Cm0S4i', 'Đặng Quốc Bảo',   'https://cdn.sothich.vn/avatars/u8.jpg',      'Nhiếp ảnh phong cảnh.',            'Đà Lạt',        370, 'active', FALSE, 'user',   'male',   '1993-04-25'),
-('nguyen_khanh', 'khanh.ntt@gmail.com',    TRUE,  '$2b$12$LXMBmKZ43J5E2ZNVQ7FXXOlat6lYPRoPJa9Smwd9hqvF5d6Cm0S4i', 'Nguyễn Thị Khánh','https://cdn.sothich.vn/avatars/u9.jpg',      'Giáo viên, yêu văn học.',          'Huế',           255, 'active', FALSE, 'user',   'female', '1992-08-10'),
-('bui_manh_hung','manhhung.bui@gmail.com', TRUE,  '$2b$12$LXMBmKZ43J5E2ZNVQ7FXXOlat6lYPRoPJa9Smwd9hqvF5d6Cm0S4i', 'Bùi Mạnh Hùng',   'https://cdn.sothich.vn/avatars/u10.jpg',     'Kỹ sư xây dựng, mê phượt.',       'Hà Nội',        300, 'active', FALSE, 'user',   'male',   '1991-02-28'),
-('ly_tuyet_mai', 'tuyetmai.ly@gmail.com',  TRUE,  '$2b$12$LXMBmKZ43J5E2ZNVQ7FXXOlat6lYPRoPJa9Smwd9hqvF5d6Cm0S4i', 'Lý Tuyết Mai',    'https://cdn.sothich.vn/avatars/u11.jpg',     'Thiết kế đồ họa freelance.',       'TP. Hồ Chí Minh',340, 'active', FALSE, 'user',   'female', '1999-06-17'),
-('tran_van_long','vanlong.tran@gmail.com', TRUE,  '$2b$12$LXMBmKZ43J5E2ZNVQ7FXXOlat6lYPRoPJa9Smwd9hqvF5d6Cm0S4i', 'Trần Văn Long',   'https://cdn.sothich.vn/avatars/u12.jpg',     'Chơi guitar, thích cafe sách.',    'Đà Nẵng',       180, 'active', FALSE, 'user',   'male',   '1996-10-03'),
-('mai_hong_nhung','hongnhung.mai@gmail.com',TRUE, '$2b$12$LXMBmKZ43J5E2ZNVQ7FXXOlat6lYPRoPJa9Smwd9hqvF5d6Cm0S4i', 'Mai Hồng Nhung',  'https://cdn.sothich.vn/avatars/u13.jpg',     'Yêu yoga và thiền định.',          'Hà Nội',        290, 'active', FALSE, 'user',   'female', '1995-01-20'),
-('phan_thanh_son','thanhson.phan@gmail.com',TRUE, '$2b$12$LXMBmKZ43J5E2ZNVQ7FXXOlat6lYPRoPJa9Smwd9hqvF5d6Cm0S4i', 'Phan Thành Sơn',  'https://cdn.sothich.vn/avatars/u14.jpg',     'Bóng đá và cà phê.',               'TP. Hồ Chí Minh',220, 'active', FALSE, 'user',   'male',   '1997-04-07'),
-('dinh_thi_lan', 'thilan.dinh@gmail.com',  TRUE,  '$2b$12$LXMBmKZ43J5E2ZNVQ7FXXOlat6lYPRoPJa9Smwd9hqvF5d6Cm0S4i', 'Đinh Thị Lan',    'https://cdn.sothich.vn/avatars/u15.jpg',     'Bác sĩ, mê làm bánh.',             'Hải Phòng',     310, 'active', FALSE, 'user',   'female', '1990-07-22'),
+('vo_bich_van',  'bichvan.vo@gmail.com',   TRUE,  '$2b$12$LXMBmKZ43J5E2ZNVQ7FXXOlat6lYPRoPJa9Smwd9hqvF5d6Cm0S4i', 'Võ Bích Vân',     'https://i.pravatar.cc/150?u=7',      'Yêu thể thao, chạy bộ mỗi sáng.', 'Hà Nội',        415, 'active', FALSE, 'user',   'female', '1994-12-01'),
+('dang_quoc_bao','quocbao.dang@gmail.com', TRUE,  '$2b$12$LXMBmKZ43J5E2ZNVQ7FXXOlat6lYPRoPJa9Smwd9hqvF5d6Cm0S4i', 'Đặng Quốc Bảo',   'https://i.pravatar.cc/150?u=8',      'Nhiếp ảnh phong cảnh.',            'Đà Lạt',        370, 'active', FALSE, 'user',   'male',   '1993-04-25'),
+('nguyen_khanh', 'khanh.ntt@gmail.com',    TRUE,  '$2b$12$LXMBmKZ43J5E2ZNVQ7FXXOlat6lYPRoPJa9Smwd9hqvF5d6Cm0S4i', 'Nguyễn Thị Khánh','https://i.pravatar.cc/150?u=9',      'Giáo viên, yêu văn học.',          'Huế',           255, 'active', FALSE, 'user',   'female', '1992-08-10'),
+('bui_manh_hung','manhhung.bui@gmail.com', TRUE,  '$2b$12$LXMBmKZ43J5E2ZNVQ7FXXOlat6lYPRoPJa9Smwd9hqvF5d6Cm0S4i', 'Bùi Mạnh Hùng',   'https://i.pravatar.cc/150?u=10',     'Kỹ sư xây dựng, mê phượt.',       'Hà Nội',        300, 'active', FALSE, 'user',   'male',   '1991-02-28'),
+('ly_tuyet_mai', 'tuyetmai.ly@gmail.com',  TRUE,  '$2b$12$LXMBmKZ43J5E2ZNVQ7FXXOlat6lYPRoPJa9Smwd9hqvF5d6Cm0S4i', 'Lý Tuyết Mai',    'https://i.pravatar.cc/150?u=11',     'Thiết kế đồ họa freelance.',       'TP. Hồ Chí Minh',340, 'active', FALSE, 'user',   'female', '1999-06-17'),
+('tran_van_long','vanlong.tran@gmail.com', TRUE,  '$2b$12$LXMBmKZ43J5E2ZNVQ7FXXOlat6lYPRoPJa9Smwd9hqvF5d6Cm0S4i', 'Trần Văn Long',   'https://i.pravatar.cc/150?u=12',     'Chơi guitar, thích cafe sách.',    'Đà Nẵng',       180, 'active', FALSE, 'user',   'male',   '1996-10-03'),
+('mai_hong_nhung','hongnhung.mai@gmail.com',TRUE, '$2b$12$LXMBmKZ43J5E2ZNVQ7FXXOlat6lYPRoPJa9Smwd9hqvF5d6Cm0S4i', 'Mai Hồng Nhung',  'https://i.pravatar.cc/150?u=13',     'Yêu yoga và thiền định.',          'Hà Nội',        290, 'active', FALSE, 'user',   'female', '1995-01-20'),
+('phan_thanh_son','thanhson.phan@gmail.com',TRUE, '$2b$12$LXMBmKZ43J5E2ZNVQ7FXXOlat6lYPRoPJa9Smwd9hqvF5d6Cm0S4i', 'Phan Thành Sơn',  'https://i.pravatar.cc/150?u=14',     'Bóng đá và cà phê.',               'TP. Hồ Chí Minh',220, 'active', FALSE, 'user',   'male',   '1997-04-07'),
+('dinh_thi_lan', 'thilan.dinh@gmail.com',  TRUE,  '$2b$12$LXMBmKZ43J5E2ZNVQ7FXXOlat6lYPRoPJa9Smwd9hqvF5d6Cm0S4i', 'Đinh Thị Lan',    'https://i.pravatar.cc/150?u=15',     'Bác sĩ, mê làm bánh.',             'Hải Phòng',     310, 'active', FALSE, 'user',   'female', '1990-07-22'),
 ('cao_minh_tri', 'minhtri.cao@gmail.com',  FALSE, '$2b$12$LXMBmKZ43J5E2ZNVQ7FXXOlat6lYPRoPJa9Smwd9hqvF5d6Cm0S4i', 'Cao Minh Trí',    NULL,                                         NULL,                               'Bình Dương',    100, 'active', FALSE, 'user',   'male',   '2001-03-11'),
-('luu_thi_oanh', 'thioanh.luu@gmail.com',  TRUE,  '$2b$12$LXMBmKZ43J5E2ZNVQ7FXXOlat6lYPRoPJa9Smwd9hqvF5d6Cm0S4i', 'Lưu Thị Oanh',    'https://cdn.sothich.vn/avatars/u17.jpg',     'Kế toán, thích đọc truyện.',       'Cần Thơ',       160, 'active', FALSE, 'user',   'female', '1993-11-30'),
-('ngo_xuan_bach','xuanbach.ngo@gmail.com', TRUE,  '$2b$12$LXMBmKZ43J5E2ZNVQ7FXXOlat6lYPRoPJa9Smwd9hqvF5d6Cm0S4i', 'Ngô Xuân Bách',   'https://cdn.sothich.vn/avatars/u18.jpg',     'Startup founder, mê công nghệ.',   'Hà Nội',        450, 'active', FALSE, 'user',   'male',   '1992-09-05'),
-('trinh_cam_van','camvan.trinh@gmail.com', TRUE,  '$2b$12$LXMBmKZ43J5E2ZNVQ7FXXOlat6lYPRoPJa9Smwd9hqvF5d6Cm0S4i', 'Trịnh Cẩm Vân',   'https://cdn.sothich.vn/avatars/u19.jpg',     'Nghệ sĩ vẽ tranh, yêu thiên nhiên.','Đà Lạt',      385, 'active', FALSE, 'user',   'female', '1998-02-14'),
-('vuong_the_vinh','thevinh.vuong@gmail.com',TRUE, '$2b$12$LXMBmKZ43J5E2ZNVQ7FXXOlat6lYPRoPJa9Smwd9hqvF5d6Cm0S4i', 'Vương Thế Vinh',  'https://cdn.sothich.vn/avatars/u20.jpg',     'Thích leo núi và cắm trại.',       'Quảng Nam',     270, 'banned', FALSE, 'user',   'male',   '1994-06-09');
+('luu_thi_oanh', 'thioanh.luu@gmail.com',  TRUE,  '$2b$12$LXMBmKZ43J5E2ZNVQ7FXXOlat6lYPRoPJa9Smwd9hqvF5d6Cm0S4i', 'Lưu Thị Oanh',    'https://i.pravatar.cc/150?u=17',     'Kế toán, thích đọc truyện.',       'Cần Thơ',       160, 'active', FALSE, 'user',   'female', '1993-11-30'),
+('ngo_xuan_bach','xuanbach.ngo@gmail.com', TRUE,  '$2b$12$LXMBmKZ43J5E2ZNVQ7FXXOlat6lYPRoPJa9Smwd9hqvF5d6Cm0S4i', 'Ngô Xuân Bách',   'https://i.pravatar.cc/150?u=18',     'Startup founder, mê công nghệ.',   'Hà Nội',        450, 'active', FALSE, 'user',   'male',   '1992-09-05'),
+('trinh_cam_van','camvan.trinh@gmail.com', TRUE,  '$2b$12$LXMBmKZ43J5E2ZNVQ7FXXOlat6lYPRoPJa9Smwd9hqvF5d6Cm0S4i', 'Trịnh Cẩm Vân',   'https://i.pravatar.cc/150?u=19',     'Nghệ sĩ vẽ tranh, yêu thiên nhiên.','Đà Lạt',      385, 'active', FALSE, 'user',   'female', '1998-02-14'),
+('vuong_the_vinh','thevinh.vuong@gmail.com',TRUE, '$2b$12$LXMBmKZ43J5E2ZNVQ7FXXOlat6lYPRoPJa9Smwd9hqvF5d6Cm0S4i', 'Vương Thế Vinh',  'https://i.pravatar.cc/150?u=20',     'Thích leo núi và cắm trại.',       'Quảng Nam',     270, 'banned', FALSE, 'user',   'male',   '1994-06-09');
 
 -- =====================================================
 -- 2. DAILY STATUS (15 status)
 -- =====================================================
 INSERT INTO daily_status (user_id, content, image_url, created_at, expires_at) VALUES
-(2,  'Sáng nay trời đẹp quá, ai đi chạy bộ Hồ Tây không?',       'https://cdn.sothich.vn/status/s1.jpg',  NOW() - INTERVAL '2 hours',  NOW() + INTERVAL '22 hours'),
+(2,  'Sáng nay trời đẹp quá, ai đi chạy bộ Hồ Tây không?',       'https://picsum.photos/seed/s1/800/600',  NOW() - INTERVAL '2 hours',  NOW() + INTERVAL '22 hours'),
 (3,  'Vừa xem xong concert, tuyệt vời!',                          NULL,                                    NOW() - INTERVAL '3 hours',  NOW() + INTERVAL '21 hours'),
 (4,  'Debug từ sáng đến giờ... cần nghỉ ngơi',                    NULL,                                    NOW() - INTERVAL '1 hour',   NOW() + INTERVAL '23 hours'),
-(5,  'Vừa làm xong bánh croissant, thơm lắm!',                    'https://cdn.sothich.vn/status/s2.jpg',  NOW() - INTERVAL '4 hours',  NOW() + INTERVAL '20 hours'),
-(7,  'Chạy 10km sáng nay, cảm giác tuyệt!',                       'https://cdn.sothich.vn/status/s3.jpg',  NOW() - INTERVAL '5 hours',  NOW() + INTERVAL '19 hours'),
-(8,  'Anh bình minh ở Đà Lạt hôm nay',                            'https://cdn.sothich.vn/status/s4.jpg',  NOW() - INTERVAL '6 hours',  NOW() + INTERVAL '18 hours'),
+(5,  'Vừa làm xong bánh croissant, thơm lắm!',                    'https://picsum.photos/seed/s2/800/600',  NOW() - INTERVAL '4 hours',  NOW() + INTERVAL '20 hours'),
+(7,  'Chạy 10km sáng nay, cảm giác tuyệt!',                       'https://picsum.photos/seed/s3/800/600',  NOW() - INTERVAL '5 hours',  NOW() + INTERVAL '19 hours'),
+(8,  'Anh bình minh ở Đà Lạt hôm nay',                            'https://picsum.photos/seed/s4/800/600',  NOW() - INTERVAL '6 hours',  NOW() + INTERVAL '18 hours'),
 (9,  'Đang đọc Truyện Kiều lần thứ ba, mỗi lần một cảm xúc.',    NULL,                                    NOW() - INTERVAL '2 hours',  NOW() + INTERVAL '22 hours'),
-(11, 'Vừa hoàn thành dự án thiết kế mới!',                        'https://cdn.sothich.vn/status/s5.jpg',  NOW() - INTERVAL '1 hour',   NOW() + INTERVAL '23 hours'),
+(11, 'Vừa hoàn thành dự án thiết kế mới!',                        'https://picsum.photos/seed/s5/800/600',  NOW() - INTERVAL '1 hour',   NOW() + INTERVAL '23 hours'),
 (12, 'Cafe sách chiều nay, ai muốn join?',                        NULL,                                    NOW() - INTERVAL '30 minutes', NOW() + INTERVAL '23 hours'),
-(13, 'Buổi yoga sáng nay thư thái lắm',                           'https://cdn.sothich.vn/status/s6.jpg',  NOW() - INTERVAL '3 hours',  NOW() + INTERVAL '21 hours'),
-(14, 'Xem trận Việt Nam tối nay nhé mọi người!',                  NULL,                                    NOW() - INTERVAL '2 hours',  NOW() + INTERVAL '22 hours'),
+(13, 'Buổi yoga sáng nay thư thái lắm',                           'https://picsum.photos/seed/s6/800/600',  NOW() - INTERVAL '3 hours',  NOW() + INTERVAL '21 hours'),
+(14, 'Xem bóng đá cùng nhau',                                     NULL,                                    NOW() - INTERVAL '2 hours',  NOW() + INTERVAL '22 hours'),
 (18, 'Vừa pitch xong cho investors, hồi hộp lắm!',                NULL,                                    NOW() - INTERVAL '1 hour',   NOW() + INTERVAL '23 hours'),
-(19, 'Hoàn thành bức tranh sơn dầu sau 2 tuần.',                  'https://cdn.sothich.vn/status/s7.jpg',  NOW() - INTERVAL '4 hours',  NOW() + INTERVAL '20 hours'),
-(10, 'Lên kế hoạch phượt Hà Giang tháng sau!',                   'https://cdn.sothich.vn/status/s8.jpg',  NOW() - INTERVAL '5 hours',  NOW() + INTERVAL '19 hours'),
+(19, 'Hoàn thành bức tranh sơn dầu sau 2 tuần.',                  'https://picsum.photos/seed/s7/800/600',  NOW() - INTERVAL '4 hours',  NOW() + INTERVAL '20 hours'),
+(10, 'Lên kế hoạch phượt Hà Giang tháng sau!',                   'https://picsum.photos/seed/s8/800/600',  NOW() - INTERVAL '5 hours',  NOW() + INTERVAL '19 hours'),
 (2,  'Vừa đọc xong Atomic Habits, hay thật sự.',                  NULL,                                    NOW() - INTERVAL '6 hours',  NOW() + INTERVAL '18 hours');
 
 

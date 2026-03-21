@@ -30,9 +30,24 @@ const getProfile = async (req, res) => {
 const getPublicProfile = async (req, res) => {
     try {
         const { userId } = req.params;
+        const myId = req.query.myId; // Optional myId for mutual context
         
         const profile = await profileService.getProfile(userId);
         const interests = await profileService.getInterests(userId);
+        
+        // New: Fetch follow stats
+        const stats = await profileService.getFollowStats(userId);
+        
+        // New: Fetch mutual followers if myId provided
+        let mutualFollowers = [];
+        let isFollowing = false;
+        if (myId && myId !== userId) {
+            mutualFollowers = await profileService.getMutualFollowers(myId, userId);
+            isFollowing = await profileService.isFollowing(myId, userId);
+        }
+
+        // New: Check for active story
+        const hasStory = await profileService.hasActiveStory(userId);
 
         return res.status(200).json({
             success: true,
@@ -48,7 +63,15 @@ const getPublicProfile = async (req, res) => {
                 dob: profile.dob,
                 reputation_score: profile.reputation_score,
                 created_at: profile.created_at,
-                interests
+                interests,
+                stats: {
+                    followers_count: stats.followers_count,
+                    following_count: stats.following_count,
+                    mutual_count: mutualFollowers.length
+                },
+                mutual_followers: mutualFollowers.slice(0, 3), // Return a sample
+                has_story: hasStory,
+                is_following: isFollowing
             }
         });
     } catch (error) {
@@ -272,6 +295,29 @@ const getInterests = async (req, res) => {
     }
 };
 
+const followUser = async (req, res) => {
+    console.log(`>>> [CONTROLLER] followUser - target: ${req.params.userId}, my: ${req.user?.user_id}`);
+    try {
+        const myId = req.user.user_id;
+        const targetId = parseInt(req.params.userId);
+        await profileService.followUser(myId, targetId);
+        res.json({ success: true, message: "Đã theo dõi" });
+    } catch (err) {
+        res.status(err.status || 500).json({ success: false, message: err.message });
+    }
+};
+
+const unfollowUser = async (req, res) => {
+    try {
+        const myId = req.user.user_id;
+        const targetId = parseInt(req.params.userId);
+        await profileService.unfollowUser(myId, targetId);
+        res.json({ success: true, message: "Đã bỏ theo dõi" });
+    } catch (err) {
+        res.status(err.status || 500).json({ success: false, message: err.message });
+    }
+};
+
 module.exports = {
     getProfile,
     getPublicProfile,
@@ -279,7 +325,9 @@ module.exports = {
     changePassword,
     updateInterests,
     updateProfileById,
-    getInterests
+    getInterests,
+    followUser,
+    unfollowUser
 };
 
 

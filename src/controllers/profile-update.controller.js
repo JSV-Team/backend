@@ -130,7 +130,7 @@ const changePassword = async (req, res) => {
 
         // Lấy password_hash từ DB
         const pool = getPool();
-        const result = await pool.query('SELECT password_hash FROM Users WHERE user_id = $1', [userId]);
+        const result = await pool.query('SELECT password_hash FROM users WHERE user_id = $1', [userId]);
         
         if (result.rows.length === 0) {
             return res.status(404).json({
@@ -155,7 +155,7 @@ const changePassword = async (req, res) => {
         const newPasswordHash = await bcrypt.hash(newPassword, 10);
 
         // Cập nhật mật khẩu
-        await pool.query('UPDATE Users SET password_hash = $1 WHERE user_id = $2', [newPasswordHash, userId]);
+        await pool.query('UPDATE users SET password_hash = $1 WHERE user_id = $2', [newPasswordHash, userId]);
 
         return res.status(200).json({
             success: true,
