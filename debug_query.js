@@ -5,7 +5,7 @@ async function test() {
     const pool = await getPool();
     const userId = 3;
     const query = `
-        WITH posts AS (
+        WITH combined_posts AS (
             SELECT 
                 a.activity_id AS post_id, a.creator_id AS creator_id, 
                 a.title AS content, a.description AS extra_content, a.location, 
@@ -27,19 +27,19 @@ async function test() {
             WHERE s.user_id = $1
         )
         SELECT 
-            p.post_id, p.creator_id AS user_id, p.content, p.extra_content, p.location, 
-            p.duration_minutes, p.max_participants, p.created_at, p.image_url, p.post_type,
+            cp.post_id, cp.creator_id, cp.content, cp.extra_content, cp.location, 
+            cp.duration_minutes, cp.max_participants, cp.created_at, cp.image_url, cp.post_type,
             u.full_name, u.avatar_url,
-            (SELECT COUNT(*) FROM post_reactions pr WHERE pr.post_id = p.post_id) AS reactions_count,
-            (SELECT COUNT(*) FROM post_comments  pc WHERE pc.post_id = p.post_id) AS comments_count,
-            (SELECT COUNT(*) FROM post_shares    ps WHERE ps.post_id = p.post_id) AS shares_count
-        FROM posts p
-        JOIN users u ON u.user_id = p.creator_id
-        ORDER BY p.created_at DESC
+            (SELECT COUNT(*) FROM post_reactions pr WHERE pr.post_id = cp.post_id) AS reactions_count,
+            (SELECT COUNT(*) FROM post_comments  pc WHERE pc.post_id = cp.post_id) AS comments_count,
+            (SELECT COUNT(*) FROM post_shares    ps WHERE ps.post_id = cp.post_id) AS shares_count
+        FROM combined_posts cp
+        JOIN users u ON u.user_id = cp.creator_id
+        ORDER BY cp.created_at DESC
     `;
     try {
         const res = await pool.query(query, [userId]);
-        console.log('Success! Rows found:', res.rows.length);
+        console.log('Success! Rows:', res.rows.length);
     } catch (err) {
         console.error('SQL Error:', err.message);
         if (err.hint) console.error('Hint:', err.hint);
