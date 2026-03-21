@@ -1,4 +1,5 @@
-const http = require('http');
+const http = require('http'); // reload 1
+
 const app = require('./app');
 const { connectDB } = require('./config/db');
 const setupSocket = require('./socket');

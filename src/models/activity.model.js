@@ -175,6 +175,42 @@ const getActivityHostId = async (activityId) => {
   return result.rows[0]?.creator_id || null;
 };
 
+const getUserActivities = async (userId) => {
+  const pool = getPool();
+  const query = `
+      SELECT DISTINCT
+        a.activity_id AS status_id,
+        a.creator_id AS user_id,
+        a.title AS content,
+        a.description AS extra_content,
+        a.location,
+        a.max_participants,
+        a.duration_minutes,
+        a.created_at,
+        u.username,
+        u.full_name,
+        u.avatar_url,
+        ai.image_url AS image_url,
+        (SELECT COUNT(*) FROM activity_requests WHERE activity_id = a.activity_id AND status = 'accepted') AS participant_count
+      FROM activities a
+      LEFT JOIN users u ON a.creator_id = u.user_id
+      LEFT JOIN LATERAL (
+          SELECT image_url
+          FROM activity_images
+          WHERE activity_id = a.activity_id
+          ORDER BY is_thumbnail DESC, image_id ASC
+          LIMIT 1
+      ) ai ON TRUE
+      WHERE (a.creator_id = $1 OR a.activity_id IN (
+          SELECT activity_id FROM activity_requests WHERE requester_id = $1 AND status = 'accepted'
+      ))
+      AND a.status IN ('active', 'approved')
+      ORDER BY a.created_at DESC
+  `;
+  const result = await pool.query(query, [userId]);
+  return result.rows;
+};
+
 module.exports = {
   getPendingActivities,
   deleteActivityRequest,
@@ -188,6 +224,6 @@ module.exports = {
   getRequestsToApprove,
   deleteActivity,
   checkActivityRequestStatus,
-  getActivityHostId
+  getActivityHostId,
+  getUserActivities
 };
-

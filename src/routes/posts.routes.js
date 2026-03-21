@@ -3,6 +3,11 @@ const c = require("../controllers/posts.controller");
 
 router.get("/:userId", c.listByUser);
 router.post("/:userId", c.createPost);
+router.delete("/:postId", c.deletePost);
+router.post("/status/:userId", c.createStatus);
+router.delete("/status/:statusId", c.deleteStatus);
+
+
 
 router.get("/detail/:postId", c.detail);
 

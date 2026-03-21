@@ -6,34 +6,48 @@ const path = require('path');
 
 const app = express();
 
+// Removed Helmet and Rate Limiting per user request
+
+
 // Setup file logging
 const logFile = fs.createWriteStream(path.join(__dirname, 'debug.log'), { flags: 'a' });
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: process.env.CLIENT_URL || '*', // In production, replace * with your domain
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-auth-user-id']
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Serve file upload tĩnh
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
-// Debug middleware - LOG ALL REQUESTS
+// Debug middleware - LOG ALL REQUESTS WITH STATUS
 app.use((req, res, next) => {
-  const hasBody = ['POST', 'PUT', 'PATCH'].includes(req.method);
-  const bodyStr = hasBody ? ` - Body: ${JSON.stringify(req.body)}` : '';
-  const msg = `\n[${new Date().toISOString()}] ${req.method} ${req.path}${bodyStr}\n`;
-  console.log(msg);
-  logFile.write(msg);
+  const start = Date.now();
+  res.on('finish', () => {
+    const duration = Date.now() - start;
+    const msg = `\n[${new Date().toISOString()}] ${req.method} ${req.originalUrl} - Status: ${res.statusCode} (${duration}ms)\n`;
+    console.log(msg);
+    logFile.write(msg);
+  });
   next();
 });
 
 // Routes
 app.use('/api', routes);
+
+// 404 Handler for API
+app.use('/api', (req, res) => {
+  res.status(404).json({ success: false, message: `API Route ${req.method} ${req.originalUrl} not found` });
+});
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // Root route
 app.get('/', (req, res) => {
-  res.json({ message: 'Welcome to JSV API', version: '1.0.0', endpoints: { users: '/api/users', friends: '/api/friends', match: '/api/match', health: '/health', notifications:'/api/notifications' } });
+  res.json({ message: 'Welcome to JSV API', version: '1.0.0', endpoints: { users: '/api/users', friends: '/api/friends', match: '/api/match', health: '/health', notifications: '/api/notifications' } });
 });
 
 // Health check
@@ -46,7 +60,7 @@ app.use((err, req, res, next) => {
   const msg = `\n[ERROR] ${err.message}\n${err.stack}\n`;
   console.error(msg);
   logFile.write(msg);
-  
+
   // Xử lý multer errors
   if (err.name === 'MulterError') {
     return res.status(400).json({
