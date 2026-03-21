@@ -226,13 +226,48 @@ CREATE TABLE messages (
     -- msg_type = 'image'  → content = image_url
     -- msg_type = 'system' → content = nội dung hệ thống tự sinh
 
-    -- text | image | system
+    -- text | image | system | location
     msg_type        VARCHAR(20)  NOT NULL DEFAULT 'text',
     created_at      TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
 
     CONSTRAINT fk_messages_conversation FOREIGN KEY (conversation_id) REFERENCES conversations(conversation_id) ON DELETE CASCADE,
     CONSTRAINT fk_messages_sender       FOREIGN KEY (sender_id)       REFERENCES users(user_id),
-    CONSTRAINT chk_messages_type        CHECK (msg_type IN ('text', 'image', 'system'))
+    CONSTRAINT chk_messages_type        CHECK (msg_type IN ('text', 'image', 'system', 'location'))
+);
+
+-- =====================================================
+-- 8. POST INTERACTIONS – Reactions, Comments, Shares
+-- =====================================================
+
+CREATE TABLE post_reactions (
+    reaction_id SERIAL       PRIMARY KEY,
+    post_id     INT          NOT NULL,
+    user_id     INT          NOT NULL,
+    emoji       VARCHAR(50)  NOT NULL,
+    created_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    updated_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+
+    CONSTRAINT fk_post_reactions_user FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+);
+
+CREATE TABLE post_comments (
+    comment_id SERIAL       PRIMARY KEY,
+    post_id    INT          NOT NULL,
+    user_id    INT          NOT NULL,
+    content    TEXT         NOT NULL,
+    created_at TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+
+    CONSTRAINT fk_post_comments_user FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+);
+
+CREATE TABLE post_shares (
+    share_id   SERIAL       PRIMARY KEY,
+    post_id    INT          NOT NULL,
+    user_id    INT          NOT NULL,
+    created_at TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+
+    CONSTRAINT fk_post_shares_user FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+    CONSTRAINT uq_post_shares       UNIQUE (post_id, user_id)
 );
 
 
