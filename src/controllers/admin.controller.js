@@ -465,8 +465,13 @@ const searchAdmin = async (req, res) => {
 const getSystemSettings = async (req, res) => {
     try {
         const pool = getPool();
-        const result = await pool.query("SELECT * FROM system_config ORDER BY config_key");
-        res.json({ success: true, data: result.rows });
+        const result = await pool.query("SELECT config_key, config_value FROM system_config");
+        // Convert array of rows to flat object { key: value }
+        const data = {};
+        result.rows.forEach(row => {
+            data[row.config_key] = row.config_value;
+        });
+        res.json({ success: true, data });
     } catch (error) {
         console.error("GetSystemSettings Error:", error);
         res.status(500).json({ success: false, message: "Lỗi server!" });
