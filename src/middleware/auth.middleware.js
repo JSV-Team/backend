@@ -1,12 +1,11 @@
 const jwt = require('jsonwebtoken');
 
 /**
- * Middleware để xác thực JWT Token
+ * Middleware để xác định token và gán user vào req
  */
 const verifyToken = (req, res, next) => {
-    // Lấy token từ header Authorization (dạng: Bearer token)
-    const authHeader = req.headers.authorization;
-    const token = authHeader && authHeader.split(' ')[1];
+    const authHeader = req.headers.authorization || req.headers['x-auth-token'];
+    const token = authHeader && (authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : authHeader);
 
     if (!token) {
         return res.status(401).json({
@@ -17,7 +16,7 @@ const verifyToken = (req, res, next) => {
 
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        req.user = decoded; // Lưu thông tin user vào request để dùng ở các bước sau
+        req.user = decoded; // Dữ liệu từ token: { user_id, role, ... }
         next();
     } catch (error) {
         return res.status(403).json({
@@ -28,7 +27,7 @@ const verifyToken = (req, res, next) => {
 };
 
 /**
- * Middleware để kiểm tra quyền Admin
+ * Middleware kiểm tra quyền Admin
  */
 const isAdmin = (req, res, next) => {
     if (!req.user || req.user.role !== 'admin') {
@@ -40,4 +39,23 @@ const isAdmin = (req, res, next) => {
     next();
 };
 
-module.exports = { verifyToken, isAdmin };
+/**
+ * Middleware kiểm tra quyền sở hữu (Chống IDOR)
+ * So sánh req.user.user_id với ID trong params (mặc định là userId hoặc id)
+ */
+const isOwner = (paramName = 'userId') => {
+    return (req, res, next) => {
+        const authenticatedUserId = req.user.user_id;
+        const targetResourceId = parseInt(req.params[paramName]);
+
+        if (authenticatedUserId !== targetResourceId && req.user.role !== 'admin') {
+            return res.status(403).json({
+                success: false,
+                message: "Bạn không có quyền thao tác trên dữ liệu của người khác!"
+            });
+        }
+        next();
+    };
+};
+
+module.exports = { verifyToken, isAdmin, isOwner };

@@ -55,7 +55,9 @@ const getPublicProfile = async (req, res) => {
                 user_id: profile.user_id,
                 username: profile.username,
                 full_name: profile.full_name,
-                email: profile.email,
+                // Email is sensitive, only show if requested or for own profile (optional policy)
+                // For now, let's hide it for public view
+                // email: profile.email, 
                 avatar_url: profile.avatar_url,
                 bio: profile.bio,
                 location: profile.location,
