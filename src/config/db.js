@@ -1,29 +1,20 @@
-const sql = require("mssql");
-const { dbConfig } = require("./env");
+const { Pool } = require("pg");
+require("dotenv").config();
 
-let pool;
+const pool = new Pool({
+  user: process.env.DB_USER,
+  host: process.env.DB_HOST,
+  database: process.env.DB_NAME,
+  password: process.env.DB_PASSWORD,
+  port: process.env.DB_PORT || 5432,
+});
 
 const connectDB = async () => {
   try {
-    // Use TCP/IP instead of named instance for better compatibility
-    const config = {
-      user: dbConfig.user,
-      password: dbConfig.password,
-      server: "localhost",
-      port: 1433,
-      database: dbConfig.database,
-      options: {
-        encrypt: false,
-        trustServerCertificate: true
-      }
-    };
-    
-    pool = await sql.connect(config);
-    console.log("✅ SQL Server connected successfully");
-    console.log(`   Database: ${config.database}`);
-    console.log(`   Server: ${config.server}:${config.port}`);
+    await pool.connect();
+    console.log("✅ PostgreSQL connected");
   } catch (err) {
-    console.error("❌ SQL Server connection failed:", err.message);
+    console.error("❌ PostgreSQL connection failed:", err);
     process.exit(1);
   }
 };
@@ -36,6 +27,7 @@ const getPool = () => {
 };
 
 module.exports = {
+  pool,
   connectDB,
   getPool
 };
