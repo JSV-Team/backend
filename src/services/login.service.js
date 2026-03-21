@@ -1,22 +1,18 @@
-const sql = require('mssql');
+const { getPool } = require("../config/db");
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
 
 const verifyUser = async (identifier, password) => {
-    const request = new sql.Request();
-    request.input('identifier', sql.VarChar, identifier);
-    
+    const pool = await getPool();
+
     // Tìm user theo email hoặc username
-    const result = await request.query(`
-        SELECT * FROM Users 
-        WHERE email = @identifier OR username = @identifier
-    `);
+    const result = await pool.query(`
+        SELECT * FROM users 
+        WHERE email = $1 OR username = $1
+    `, [identifier]);
 
-    const user = result.recordset[0];
-    console.log("LOGIN ATTEMPT - Identifier:", identifier);
-    console.log("USER FOUND - Username:", user?.username, "Hash in DB:", user?.password_hash);
-
+    const user = result.rows[0];
     if (!user) {
         return { success: false, message: "Tài khoản hoặc mật khẩu không chính xác!" };
     }
@@ -29,18 +25,18 @@ const verifyUser = async (identifier, password) => {
     // So sánh mật khẩu
     const isMatch = await bcrypt.compare(password, user.password_hash);
     console.log("BCRYPT MATCH RESULT:", isMatch);
-    
+
     if (!isMatch) {
         return { success: false, message: "Tài khoản hoặc mật khẩu không chính xác!" };
     }
 
     // Tạo JWT Token
     const token = jwt.sign(
-        { 
-            user_id: user.user_id, 
-            username: user.username, 
-            email: user.email, 
-            role: user.role 
+        {
+            user_id: user.user_id,
+            username: user.username,
+            email: user.email,
+            role: user.role
         },
         process.env.JWT_SECRET || 'super_secret_key',
         { expiresIn: '7d' }

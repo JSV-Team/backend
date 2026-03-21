@@ -1,4 +1,5 @@
 const chatModel = require('../models/chat.model');
+const activityModel = require('../models/activity.model');
 
 const getUserConversations = async (userId) => {
     return await chatModel.getUserConversations(userId);
@@ -86,6 +87,33 @@ const getOrInitPrivateConversation = async (user1, user2) => {
     return conv;
 };
 
+// Kiểm tra user có thể nhắn tin cho host của activity không
+// Yêu cầu: request của user phải ở trạng thái 'accepted'
+const canMessageActivityHost = async (activityId, userId) => {
+    // Lấy host ID của activity
+    const hostId = await activityModel.getActivityHostId(activityId);
+    if (!hostId) {
+        throw new Error('Hoạt động không tồn tại');
+    }
+
+    // Host có thể tự nhắn tin cho mình
+    if (userId === hostId) {
+        return true;
+    }
+
+    // Kiểm tra request status
+    const requestStatus = await activityModel.checkActivityRequestStatus(activityId, userId);
+    if (!requestStatus) {
+        throw new Error('Bạn chưa gửi yêu cầu tham gia hoạt động này');
+    }
+
+    if (requestStatus.status !== 'accepted') {
+        throw new Error('Bạn cần được duyệt tham gia hoạt động mới có thể nhắn tin cho host');
+    }
+
+    return true;
+};
+
 const getConversationMembers = async (conversationId) => {
     return await chatModel.getConversationMembers(conversationId);
 };
@@ -97,5 +125,6 @@ module.exports = {
     leaveConversation,
     initOrJoinActivityChat,
     getConversationMembers,
-    getOrInitPrivateConversation
+    getOrInitPrivateConversation,
+    canMessageActivityHost
 };

@@ -1,6 +1,5 @@
 const profileService = require('../services/profile-update.service');
 const bcrypt = require('bcrypt');
-const sql = require('mssql');
 const { getPool } = require('../config/db');
 
 // Lấy thông tin profile của user hiện tại
@@ -127,19 +126,17 @@ const changePassword = async (req, res) => {
         }
 
         // Lấy password_hash từ DB
-        const pool = await getPool();
-        const result = await pool.request()
-            .input('userId', sql.Int, userId)
-            .query('SELECT password_hash FROM Users WHERE user_id = @userId');
+        const pool = getPool();
+        const result = await pool.query('SELECT password_hash FROM Users WHERE user_id = $1', [userId]);
         
-        if (!result.recordset[0]) {
+        if (result.rows.length === 0) {
             return res.status(404).json({
                 success: false,
                 message: "Không tìm thấy người dùng"
             });
         }
 
-        const passwordHash = result.recordset[0].password_hash;
+        const passwordHash = result.rows[0].password_hash;
 
         // Verify mật khẩu cũ
         const isMatch = await bcrypt.compare(currentPassword, passwordHash);
@@ -155,10 +152,7 @@ const changePassword = async (req, res) => {
         const newPasswordHash = await bcrypt.hash(newPassword, 10);
 
         // Cập nhật mật khẩu
-        await pool.request()
-            .input('userId', sql.Int, userId)
-            .input('passwordHash', sql.NVarChar(255), newPasswordHash)
-            .query('UPDATE Users SET password_hash = @passwordHash WHERE user_id = @userId');
+        await pool.query('UPDATE Users SET password_hash = $1 WHERE user_id = $2', [newPasswordHash, userId]);
 
         return res.status(200).json({
             success: true,
@@ -209,4 +203,5 @@ module.exports = {
     changePassword,
     updateInterests
 };
+
 
