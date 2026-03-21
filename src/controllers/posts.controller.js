@@ -72,3 +72,28 @@ exports.sharers = async (req, res, next) => {
     res.json(await s.sharers(Number(req.params.postId)));
   } catch (e) { next(e); }
 };
+
+exports.createStatus = async (req, res, next) => {
+  try {
+    const userId = Number(req.params.userId || req.body.userId);
+    res.json(await s.createStatus(userId, req.body));
+  } catch (e) { next(e); }
+};
+
+exports.deletePost = exports.deleteActivity = async (req, res, next) => {
+  try {
+    const { postId } = req.params;
+    const userId = Number(req.query.userId || req.body.userId);
+    res.json(await s.deletePost(postId, userId));
+  } catch (e) { next(e); }
+};
+
+exports.deleteStatus = async (req, res, next) => {
+  try {
+    const { statusId } = req.params;
+    const userId = Number(req.query.userId || req.body.userId);
+    res.json(await s.deleteStatus(statusId, userId));
+  } catch (e) { next(e); }
+};
+
+

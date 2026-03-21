@@ -17,18 +17,25 @@ app.use(express.urlencoded({ extended: true }));
 // Serve file upload tĩnh
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
-// Debug middleware - LOG ALL REQUESTS
+// Debug middleware - LOG ALL REQUESTS WITH STATUS
 app.use((req, res, next) => {
-  const hasBody = ['POST', 'PUT', 'PATCH'].includes(req.method);
-  const bodyStr = hasBody ? ` - Body: ${JSON.stringify(req.body)}` : '';
-  const msg = `\n[${new Date().toISOString()}] ${req.method} ${req.path}${bodyStr}\n`;
-  console.log(msg);
-  logFile.write(msg);
+  const start = Date.now();
+  res.on('finish', () => {
+    const duration = Date.now() - start;
+    const msg = `\n[${new Date().toISOString()}] ${req.method} ${req.originalUrl} - Status: ${res.statusCode} (${duration}ms)\n`;
+    console.log(msg);
+    logFile.write(msg);
+  });
   next();
 });
 
 // Routes
 app.use('/api', routes);
+
+// 404 Handler for API
+app.use('/api', (req, res) => {
+  res.status(404).json({ success: false, message: `API Route ${req.method} ${req.originalUrl} not found` });
+});
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // Root route

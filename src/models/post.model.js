@@ -7,8 +7,9 @@ const insertPost = async (userId, content, imageUrl = null, additionalData = {})
   const pool = getPool();
   const { description = '', location = '', maxParticipants = 10, duration = 60 } = additionalData;
 
+  const client = await pool.connect();
   try {
-    await pool.query('BEGIN');
+    await client.query('BEGIN');
     
     const query = `
       INSERT INTO activities (creator_id, title, description, location, max_participants, duration_minutes, status, created_at)
@@ -17,23 +18,25 @@ const insertPost = async (userId, content, imageUrl = null, additionalData = {})
     `;
     const values = [userId, content, description, location, maxParticipants, duration];
     
-    const result = await pool.query(query, values);
+    const result = await client.query(query, values);
     const activityId = result.rows[0].activity_id;
 
     if (imageUrl) {
-      await pool.query(`
+      await client.query(`
         INSERT INTO activity_images (activity_id, image_url, is_thumbnail)
         VALUES ($1, $2, true)
       `, [activityId, imageUrl]);
     }
     
-    await pool.query('COMMIT');
+    await client.query('COMMIT');
     console.log('Post created with ID:', activityId);
     return activityId;
   } catch (error) {
-    await pool.query('ROLLBACK');
+    await client.query('ROLLBACK');
     console.error('insertPost error:', error.message);
     throw error;
+  } finally {
+    client.release();
   }
 };
 
@@ -52,7 +55,7 @@ const getPostById = async (activityId) => {
         a.location,
         a.max_participants,
         a.created_at,
-        COALESCE(ai.image_url, a.image_url) AS image_url,
+        COALESCE(ai.image_url, null) AS image_url,
         u.username,
         u.full_name,
         u.avatar_url
@@ -85,7 +88,7 @@ const getAllPosts = async (limit = 50) => {
         a.max_participants,
         a.duration_minutes,
         a.created_at,
-        COALESCE(ai.image_url, a.image_url) AS image_url,
+        img.image_url,
         u.username,
         u.full_name,
         u.avatar_url
@@ -111,4 +114,3 @@ const getAllPosts = async (limit = 50) => {
 };
 
 module.exports = { insertPost, getPostById, getAllPosts };
-

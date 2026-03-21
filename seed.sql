@@ -23,21 +23,21 @@ INSERT INTO activities (creator_id, title, description, location, duration_minut
 
 -- 6. ACTIVITY IMAGES
 INSERT INTO activity_images (activity_id, image_url, sort_order, is_thumbnail) VALUES
-(1,  'https://cdn.sothich.vn/act/a1_1.jpg',  0, TRUE),
-(1,  'https://cdn.sothich.vn/act/a1_2.jpg',  1, FALSE),
-(2,  'https://cdn.sothich.vn/act/a2_1.jpg',  0, TRUE),
-(3,  'https://cdn.sothich.vn/act/a3_1.jpg',  0, TRUE),
-(3,  'https://cdn.sothich.vn/act/a3_2.jpg',  1, FALSE),
-(4,  'https://cdn.sothich.vn/act/a4_1.jpg',  0, TRUE),
-(5,  'https://cdn.sothich.vn/act/a5_1.jpg',  0, TRUE),
-(5,  'https://cdn.sothich.vn/act/a5_2.jpg',  1, FALSE),
-(5,  'https://cdn.sothich.vn/act/a5_3.jpg',  2, FALSE),
-(6,  'https://cdn.sothich.vn/act/a6_1.jpg',  0, TRUE),
-(7,  'https://cdn.sothich.vn/act/a7_1.jpg',  0, TRUE),
-(8,  'https://cdn.sothich.vn/act/a8_1.jpg',  0, TRUE),
-(8,  'https://cdn.sothich.vn/act/a8_2.jpg',  1, FALSE),
-(12, 'https://cdn.sothich.vn/act/a12_1.jpg', 0, TRUE),
-(13, 'https://cdn.sothich.vn/act/a13_1.jpg', 0, TRUE);
+(1,  'https://picsum.photos/seed/act1_1/800/600',  0, TRUE),
+(1,  'https://picsum.photos/seed/act1_2/800/600',  1, FALSE),
+(2,  'https://picsum.photos/seed/act2_1/800/600',  0, TRUE),
+(3,  'https://picsum.photos/seed/act3_1/800/600',  0, TRUE),
+(3,  'https://picsum.photos/seed/act3_2/800/600',  1, FALSE),
+(4,  'https://picsum.photos/seed/act4_1/800/600',  0, TRUE),
+(5,  'https://picsum.photos/seed/act5_1/800/600',  0, TRUE),
+(5,  'https://picsum.photos/seed/act5_2/800/600',  1, FALSE),
+(5,  'https://picsum.photos/seed/act5_3/800/600',  2, FALSE),
+(6,  'https://picsum.photos/seed/act6_1/800/600',  0, TRUE),
+(7,  'https://picsum.photos/seed/act7_1/800/600',  0, TRUE),
+(8,  'https://picsum.photos/seed/act8_1/800/600',  0, TRUE),
+(8,  'https://picsum.photos/seed/act8_2/800/600',  1, FALSE),
+(12, 'https://picsum.photos/seed/act12_1/800/600', 0, TRUE),
+(13, 'https://picsum.photos/seed/act13_1/800/600', 0, TRUE);
 
 -- 7. ACTIVITY TAGS
 INSERT INTO activity_tags (activity_id, interest_id) VALUES
