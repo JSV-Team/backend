@@ -1,18 +1,17 @@
-const sql = require('mssql');
+const { getPool } = require("../config/db");
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 
 const verifyUser = async (identifier, password) => {
-    const request = new sql.Request();
-    request.input('identifier', sql.VarChar, identifier);
+    const pool = await getPool();
     
     // Tìm user theo email hoặc username
-    const result = await request.query(`
-        SELECT * FROM Users 
-        WHERE email = @identifier OR username = @identifier
-    `);
+    const result = await pool.query(`
+        SELECT * FROM users 
+        WHERE email = $1 OR username = $1
+    `, [identifier]);
 
-    const user = result.recordset[0];
+    const user = result.rows[0];
     if (!user) {
         return { success: false, message: "Tài khoản hoặc mật khẩu không chính xác!" };
     }

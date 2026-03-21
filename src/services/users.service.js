@@ -1,4 +1,4 @@
-const { getPool, sql } = require("../config/db");
+const { getPool } = require("../config/db");
 
 // Search users by username or full_name
 exports.search = async (query) => {
@@ -11,17 +11,15 @@ exports.search = async (query) => {
   
   const searchTerm = `%${query.trim()}%`;
   
-  const result = await pool.request()
-    .input("search", sql.NVarChar(100), searchTerm)
-    .query(`
-      SELECT user_id, username, full_name, avatar_url, bio
-      FROM Users 
-      WHERE (username LIKE @search OR full_name LIKE @search)
-        AND status = 'active'
-      ORDER BY full_name
-      OFFSET 0 ROWS FETCH NEXT 20 ROWS ONLY
-    `);
+  const result = await pool.query(`
+    SELECT user_id, username, full_name, avatar_url, bio
+    FROM users 
+    WHERE (username ILIKE $1 OR full_name ILIKE $1)
+      AND status = 'active'
+    ORDER BY full_name
+    LIMIT 20 OFFSET 0
+  `, [searchTerm]);
   
-  return result.recordset;
+  return result.rows;
 };
 

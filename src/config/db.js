@@ -1,30 +1,33 @@
-  const sql = require("mssql");
-  const { dbConfig } = require("./env");
+const { Pool } = require("pg");
+require("dotenv").config();
 
-  let pool;
+const pool = new Pool({
+  user: process.env.DB_USER,
+  host: process.env.DB_HOST,
+  database: process.env.DB_NAME,
+  password: process.env.DB_PASSWORD,
+  port: process.env.DB_PORT || 5432,
+});
 
-  const connectDB = async () => {
-    try {
-      pool = await sql.connect(dbConfig);
-      console.log("✅ SQL Server connected");
-    } catch (err) {
-      console.error("❌ SQL Server connection failed:", err);
-      process.exit(1);
-    }
-  };
+const connectDB = async () => {
+  try {
+    await pool.connect();
+    console.log("✅ PostgreSQL connected");
+  } catch (err) {
+    console.error("❌ PostgreSQL connection failed:", err);
+    process.exit(1);
+  }
+};
 
-  const getPool = () => {
-    require('fs').appendFileSync('sql_err.log', `[${new Date().toISOString()}] getPool called. Pool exists: ${!!pool}\n`);
-    if (!pool) {
-
-      throw new Error("DB not connected yet");
-    }
-    return pool;
-  };
-
+const getPool = () => {
+  if (!pool) {
+    throw new Error("DB not connected yet");
+  }
+  return pool;
+};
 
 module.exports = {
-  sql,
+  pool,
   connectDB,
   getPool
 };

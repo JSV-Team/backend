@@ -81,6 +81,17 @@ const deleteActivity = async (activityId, userId) => {
         throw new Error('Hoạt động không tồn tại hoặc bạn không có quyền xóa');
     }
 
+    // Xóa conversation của activity nếu có
+    const chatModel = require('../models/chat.model');
+    const conv = await chatModel.getConversationByActivityId(activityId);
+    if (conv) {
+        const pool = require('../config/db').getPool();
+        // Xóa messages trước
+        await pool.query('DELETE FROM messages WHERE conversation_id = $1', [conv.conversation_id]);
+        // Xóa conversation (members sẽ tự xóa do CASCADE)
+        await pool.query('DELETE FROM conversations WHERE conversation_id = $1', [conv.conversation_id]);
+    }
+
     return result;
 };
 
