@@ -7,7 +7,7 @@ const createAdmin = async () => {
     const pool = getPool();
     const username = 'admin_antigravity';
     const email = 'admin@antigravity.io';
-    const password = 'Admin@123';
+    const password = 'Password@123';
     const role = 'admin';
 
     // Check if user exists
