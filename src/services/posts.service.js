@@ -1,37 +1,52 @@
 const { getPool } = require("../config/db");
 const bannedKeywordModel = require('../models/bannedKeyword.model');
 
+/**
+ * Lấy danh sách bài đăng của 1 user (bao gồm Activities và DailyStatus)
+ */
 exports.listByUser = async (userId) => {
-  const pool = await getPool();
+  const pool = getPool();
+  
+  // Combine activities and daily_status to show in profile 'posts' tab
   const query = `
-      SELECT post_id, user_id, content, description, location, 
-             duration_minutes, max_participants, created_at, image_url, post_type,
-             (SELECT COUNT(*) FROM post_reactions WHERE post_id = combined.post_id) AS reactions_count,
-             (SELECT COUNT(*) FROM post_comments  WHERE post_id = combined.post_id) AS comments_count,
-             (SELECT COUNT(*) FROM post_shares    WHERE post_id = combined.post_id) AS shares_count
-      FROM (
-          SELECT a.activity_id AS post_id, a.creator_id AS user_id, 
-                 a.title AS content, a.description, a.location, 
-                 a.duration_minutes, a.max_participants, a.created_at,
-                 (SELECT image_url FROM activity_images WHERE activity_id = a.activity_id LIMIT 1) AS image_url,
-                 'activity' AS post_type
-          FROM activities a
-          WHERE a.creator_id=$1
-          UNION ALL
-          SELECT s.status_id AS post_id, s.user_id, 
-                 s.content, '' AS description, '' AS location, 
-                 NULL AS duration_minutes, NULL AS max_participants, s.created_at,
-                 s.image_url,
-                 'status' AS post_type
-          FROM daily_status s
-          WHERE s.user_id=$1
-      ) combined
-      ORDER BY created_at DESC
-    `;
+    SELECT 
+      post_id, user_id, content, extra_content, location, 
+      duration_minutes, max_participants, created_at, image_url, post_type,
+      u.full_name, u.avatar_url,
+      (SELECT COUNT(*) FROM post_reactions WHERE post_id = combined.post_id) AS reactions_count,
+      (SELECT COUNT(*) FROM post_comments  WHERE post_id = combined.post_id) AS comments_count,
+      (SELECT COUNT(*) FROM post_shares    WHERE post_id = combined.post_id) AS shares_count
+    FROM (
+      SELECT 
+        a.activity_id AS post_id, a.creator_id AS user_id, 
+        a.title AS content, a.description AS extra_content, a.location, 
+        a.duration_minutes, a.max_participants, a.created_at,
+        (SELECT image_url FROM activity_images WHERE activity_id = a.activity_id LIMIT 1) AS image_url,
+        'activity' AS post_type
+      FROM activities a
+      WHERE a.creator_id = $1 AND a.status = 'active'
+      
+      UNION ALL
+      
+      SELECT 
+        s.status_id AS post_id, s.user_id, 
+        s.content, '' AS extra_content, '' AS location, 
+        NULL AS duration_minutes, NULL AS max_participants, s.created_at,
+        s.image_url,
+        'status' AS post_type
+      FROM daily_status s
+      WHERE s.user_id = $1
+    ) AS combined
+    JOIN users u ON u.user_id = combined.user_id
+    ORDER BY created_at DESC
+  `;
   const r = await pool.query(query, [userId]);
   return r.rows;
 };
 
+/**
+ * Tạo bài đăng mới (vào bảng activities)
+ */
 exports.createPost = async (userId, payload) => {
   console.log(`[posts.service] createPost - userId: ${userId} (${typeof userId})`);
 
@@ -40,13 +55,13 @@ exports.createPost = async (userId, payload) => {
   textToCheck = textToCheck.toLowerCase();
 
   const bannedKeywords = await bannedKeywordModel.getAllBannedKeywords();
-  const foundBannedWord = bannedKeywords.find(keyword => keyword && textToCheck.includes(keyword.toLowerCase()));
+  const foundBannedWord = bannedKeywords.find(kw => kw && textToCheck.includes(kw.toLowerCase()));
 
   if (foundBannedWord) {
     throw new Error('Vi phạm từ ngữ đăng bài');
   }
 
-  const pool = await getPool();
+  const pool = getPool();
   const client = await pool.connect();
 
   const { media = [] } = payload;
@@ -55,26 +70,28 @@ exports.createPost = async (userId, payload) => {
     await client.query('BEGIN');
 
     const insPostQuery = `
-        INSERT INTO activities(creator_id, title, description, location, duration_minutes, max_participants)
-        VALUES ($1, $2, $3, $4, $5, $6)
+        INSERT INTO activities(creator_id, title, description, location, duration_minutes, max_participants, status)
+        VALUES ($1, $2, $3, $4, $5, $6, 'active')
         RETURNING activity_id
       `;
     const insPostValues = [
-      userId, 
-      payload.title || payload.content || "Không tiêu đề", 
-      payload.description || payload.desc || "", 
-      payload.location || null, 
-      payload.duration_minutes || null, 
+      userId,
+      payload.title || payload.content || "Không tiêu đề",
+      payload.description || payload.desc || "",
+      payload.location || null,
+      payload.duration_minutes || null,
       payload.max_participants || null
     ];
-    
     const insPost = await client.query(insPostQuery, insPostValues);
     const postId = insPost.rows[0].activity_id;
 
     // media (nếu có)
-    for (const m of media || []) {
+    for (const m of media) {
       if (!m?.url) continue;
-      await client.query(`INSERT INTO activity_images(activity_id, image_url) VALUES($1, $2)`, [postId, m.url]);
+      await client.query(
+        `INSERT INTO activity_images(activity_id, image_url) VALUES($1, $2)`,
+        [postId, m.url]
+      );
     }
 
     await client.query('COMMIT');
@@ -87,89 +104,155 @@ exports.createPost = async (userId, payload) => {
   }
 };
 
+/**
+ * Tạo DailyStatus
+ */
+exports.createStatus = async (userId, payload) => {
+  const pool = getPool();
+  const { title, content, description, media = [] } = payload;
+  const imageUrl = media.length > 0 ? media[0].url : (payload.image_url || null);
+  const statusContent = title || content || description || "";
+  
+  const expiresAt = new Date();
+  expiresAt.setDate(expiresAt.getDate() + 1);
+
+  const query = `
+    INSERT INTO daily_status (user_id, content, image_url, expires_at, created_at)
+    VALUES ($1, $2, $3, $4, NOW())
+    RETURNING status_id
+  `;
+  const r = await pool.query(query, [userId, statusContent, imageUrl, expiresAt]);
+  return { status_id: r.rows[0].status_id };
+};
+
+/**
+ * Xóa activity (mềm)
+ */
+exports.deletePost = async (postId, userId) => {
+  const pool = getPool();
+  await pool.query(
+    "UPDATE activities SET status = 'deleted' WHERE activity_id = $1 AND creator_id = $2",
+    [postId, userId]
+  );
+  return { ok: true };
+};
+
+/**
+ * Xóa status
+ */
+exports.deleteStatus = async (statusId, userId) => {
+  const pool = getPool();
+  await pool.query(
+    "DELETE FROM daily_status WHERE status_id = $1 AND user_id = $2",
+    [statusId, userId]
+  );
+  return { ok: true };
+};
+
+/**
+ * Lấy detail post (stats)
+ */
 exports.detail = async (postId) => {
-  const pool = await getPool();
+  const pool = getPool();
   const query = `
       SELECT
-        (SELECT COUNT(*) FROM post_reactions WHERE post_id=$1) AS reactions,
-        (SELECT COUNT(*) FROM post_comments  WHERE post_id=$1) AS comments,
-        (SELECT COUNT(*) FROM post_shares    WHERE post_id=$1) AS shares
+        (SELECT COUNT(*) FROM post_reactions WHERE post_id = $1) AS reactions,
+        (SELECT COUNT(*) FROM post_comments  WHERE post_id = $1) AS comments,
+        (SELECT COUNT(*) FROM post_shares    WHERE post_id = $1) AS shares
     `;
   const r = await pool.query(query, [postId]);
   return r.rows[0];
 };
 
+/**
+ * Reaction (Toggle)
+ */
 exports.react = async (postId, userId, emoji) => {
   if (!emoji) throw Object.assign(new Error("emoji is required"), { status: 400 });
-  const pool = await getPool();
+  const pool = getPool();
 
-  // toggle: nếu tồn tại cùng emoji -> xóa; khác emoji -> update; chưa có -> insert
-  const existing = await pool.query(`SELECT emoji FROM post_reactions WHERE post_id=$1 AND user_id=$2`, [postId, userId]);
+  const existingResult = await pool.query(
+    `SELECT emoji FROM post_reactions WHERE post_id = $1 AND user_id = $2`,
+    [postId, userId]
+  );
 
-  if (existing.rows[0]) {
-    const old = existing.rows[0].emoji;
+  if (existingResult.rows.length > 0) {
+    const old = existingResult.rows[0].emoji;
     if (old === emoji) {
-      await pool.query(`DELETE FROM post_reactions WHERE post_id=$1 AND user_id=$2`, [postId, userId]);
+      await pool.query(
+        `DELETE FROM post_reactions WHERE post_id = $1 AND user_id = $2`,
+        [postId, userId]
+      );
       return { toggled: "removed" };
     }
-    await pool.query(`UPDATE post_reactions SET emoji=$1, updated_at=NOW() WHERE post_id=$2 AND user_id=$3`, [emoji, postId, userId]);
+    await pool.query(
+      `UPDATE post_reactions SET emoji = $1, updated_at = NOW() WHERE post_id = $2 AND user_id = $3`,
+      [emoji, postId, userId]
+    );
     return { toggled: "updated" };
   }
 
-  await pool.query(`INSERT INTO post_reactions(post_id, user_id, emoji) VALUES($1, $2, $3)`, [postId, userId, emoji]);
+  await pool.query(
+    `INSERT INTO post_reactions(post_id, user_id, emoji) VALUES($1, $2, $3)`,
+    [postId, userId, emoji]
+  );
   return { toggled: "added" };
 };
 
 exports.reactors = async (postId) => {
-  const pool = await getPool();
-  const r = await pool.query(`
+  const pool = getPool();
+  const query = `
       SELECT u.user_id, u.full_name, u.email, u.avatar_url, pr.emoji, pr.created_at
       FROM post_reactions pr
       JOIN users u ON u.user_id = pr.user_id
-      WHERE pr.post_id=$1
+      WHERE pr.post_id = $1
       ORDER BY pr.created_at DESC
-    `, [postId]);
+    `;
+  const r = await pool.query(query, [postId]);
   return r.rows;
 };
 
 exports.comment = async (postId, userId, content) => {
   if (!content.trim()) throw Object.assign(new Error("content is required"), { status: 400 });
-  const pool = await getPool();
-  const r = await pool.query(`
+  const pool = getPool();
+  const query = `
       INSERT INTO post_comments(post_id, user_id, content)
       VALUES($1, $2, $3)
       RETURNING comment_id
-    `, [postId, userId, content]);
+    `;
+  const r = await pool.query(query, [postId, userId, content]);
   return { comment_id: r.rows[0].comment_id };
 };
 
 exports.comments = async (postId) => {
-  const pool = await getPool();
-  const r = await pool.query(`
+  const pool = getPool();
+  const query = `
       SELECT c.comment_id, c.content, c.created_at,
              u.user_id, u.full_name, u.avatar_url
       FROM post_comments c
-      JOIN users u ON u.user_id=c.user_id
-      WHERE c.post_id=$1
+      JOIN users u ON u.user_id = c.user_id
+      WHERE c.post_id = $1
       ORDER BY c.created_at DESC
-    `, [postId]);
+    `;
+  const r = await pool.query(query, [postId]);
   return r.rows;
 };
 
 exports.commenters = async (postId) => {
-  const pool = await getPool();
-  const r = await pool.query(`
+  const pool = getPool();
+  const query = `
       SELECT DISTINCT u.user_id, u.full_name, u.email, u.avatar_url
       FROM post_comments c
-      JOIN users u ON u.user_id=c.user_id
-      WHERE c.post_id=$1
+      JOIN users u ON u.user_id = c.user_id
+      WHERE c.post_id = $1
       ORDER BY u.user_id DESC
-    `, [postId]);
+    `;
+  const r = await pool.query(query, [postId]);
   return r.rows;
 };
 
 exports.share = async (postId, userId) => {
-  const pool = await getPool();
+  const pool = getPool();
   await pool.query(`
       INSERT INTO post_shares(post_id, user_id)
       VALUES($1, $2)
@@ -179,44 +262,14 @@ exports.share = async (postId, userId) => {
 };
 
 exports.sharers = async (postId) => {
-  const pool = await getPool();
-  const r = await pool.query(`
+  const pool = getPool();
+  const query = `
       SELECT u.user_id, u.full_name, u.email, u.avatar_url, ps.created_at
       FROM post_shares ps
-      JOIN users u ON u.user_id=ps.user_id
-      WHERE ps.post_id=$1
+      JOIN users u ON u.user_id = ps.user_id
+      WHERE ps.post_id = $1
       ORDER BY ps.created_at DESC
-    `, [postId]);
+    `;
+  const r = await pool.query(query, [postId]);
   return r.rows;
-};
-
-exports.createStatus = async (userId, payload) => {
-  const pool = await getPool();
-  const { title, description, content, media = [] } = payload;
-  
-  const imageUrl = media.length > 0 ? media[0].url : null;
-  const statusContent = title || content || description || "";
-
-  const expiresAt = new Date();
-  expiresAt.setDate(expiresAt.getDate() + 1);
-
-  const r = await pool.query(`
-      INSERT INTO daily_status (user_id, content, image_url, expires_at)
-      VALUES ($1, $2, $3, $4)
-      RETURNING status_id
-    `, [userId, statusContent, imageUrl, expiresAt]);
-  
-  return { status_id: r.rows[0].status_id };
-};
-
-exports.deletePost = async (postId, userId) => {
-  const pool = await getPool();
-  await pool.query("DELETE FROM activities WHERE activity_id = $1 AND creator_id = $2", [postId, userId]);
-  return { ok: true };
-};
-
-exports.deleteStatus = async (statusId, userId) => {
-  const pool = await getPool();
-  await pool.query("DELETE FROM daily_status WHERE status_id = $1 AND user_id = $2", [statusId, userId]);
-  return { ok: true };
 };

@@ -18,7 +18,6 @@ exports.updateProfile = async (userId, payload) => {
   const pool = await getPool();
   const { full_name, email, avatar_url, bio, location, gender, dob } = payload;
 
-  // Fetch current profile to get current email if not provided
   const current = await exports.getProfile(userId);
 
   await pool.query(`
@@ -28,15 +27,15 @@ exports.updateProfile = async (userId, payload) => {
           gender=$6, dob=$7
       WHERE user_id=$8
     `, [
-      full_name || current.full_name,
-      email || current.email,
-      avatar_url ?? current.avatar_url,
-      bio ?? current.bio,
-      location ?? current.location,
-      gender ?? current.gender,
-      dob ?? current.dob,
-      userId
-    ]);
+    full_name || current.full_name,
+    email || current.email,
+    avatar_url ?? current.avatar_url,
+    bio ?? current.bio,
+    location ?? current.location,
+    gender ?? current.gender,
+    dob ?? current.dob,
+    userId
+  ]);
 
   return exports.getProfile(userId);
 };
@@ -63,12 +62,10 @@ exports.updateInterests = async (userId, interests) => {
 
   try {
     await client.query('BEGIN');
-    
-    // Xóa hết interests cũ
+
     await client.query(`DELETE FROM user_interests WHERE user_id=$1`, [userId]);
 
     for (const name of clean) {
-      // Upsert interest
       const ins = await client.query(`
         INSERT INTO interests (name) 
         VALUES ($1)
@@ -101,8 +98,8 @@ exports.getFollowStats = async (userId) => {
   const pool = await getPool();
   const r = await pool.query(`
     SELECT 
-      (SELECT COUNT(*) FROM follows WHERE following_id=$1) AS followers_count,
-      (SELECT COUNT(*) FROM follows WHERE follower_id=$1) AS following_count
+      (SELECT COUNT(*) FROM follows WHERE following_id=$1)::INT AS followers_count,
+      (SELECT COUNT(*) FROM follows WHERE follower_id=$1)::INT AS following_count
   `, [userId]);
   return r.rows[0];
 };
@@ -111,27 +108,27 @@ exports.getFollowStats = async (userId) => {
 exports.getMutualFollowers = async (myId, targetId) => {
   const pool = await getPool();
   if (!myId || !targetId) return [];
-  
+
   const r = await pool.query(`
-    SELECT u.user_id, u.username, u.full_name, u.avatar_url
-    FROM users u
-    WHERE u.user_id IN (
-      SELECT following_id FROM follows WHERE follower_id = $1
-      INTERSECT
-      SELECT following_id FROM follows WHERE follower_id = $2
-    )
-  `, [myId, targetId]);
+      SELECT u.user_id, u.username, u.full_name, u.avatar_url
+      FROM users u
+      WHERE u.user_id IN (
+        SELECT following_id FROM follows WHERE follower_id = $1
+        INTERSECT
+        SELECT following_id FROM follows WHERE follower_id = $2
+      )
+    `, [myId, targetId]);
   return r.rows;
 };
 
-// Kiểm tra xem user có DailyStatus (Story) đang hoạt động không
+// Kiểm tra xem user có daily_status (Story) đang hoạt động không
 exports.hasActiveStory = async (userId) => {
   const pool = await getPool();
   const r = await pool.query(`
-    SELECT 1 FROM daily_status 
-    WHERE user_id=$1 AND expires_at > NOW()
-    LIMIT 1
-  `, [userId]);
+      SELECT 1 FROM daily_status 
+      WHERE user_id=$1 AND expires_at > NOW()
+      LIMIT 1
+    `, [userId]);
   return r.rows.length > 0;
 };
 
@@ -140,7 +137,7 @@ exports.followUser = async (myId, targetId) => {
   console.log(`>>> [SERVICE] followUser - myId: ${myId}, targetId: ${targetId}`);
   const pool = await getPool();
   if (myId === targetId) throw Object.assign(new Error("Cannot follow yourself"), { status: 400 });
-  
+
   await pool.query(`
     INSERT INTO follows (follower_id, following_id, created_at)
     VALUES ($1, $2, NOW())
