@@ -1,10 +1,11 @@
 const { getPool } = require("../config/db");
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+require('dotenv').config();
 
 const verifyUser = async (identifier, password) => {
     const pool = await getPool();
-    
+
     // Tìm user theo email hoặc username
     const result = await pool.query(`
         SELECT * FROM users 
@@ -23,30 +24,27 @@ const verifyUser = async (identifier, password) => {
 
     // So sánh mật khẩu
     const isMatch = await bcrypt.compare(password, user.password_hash);
-    
+    console.log("BCRYPT MATCH RESULT:", isMatch);
+
     if (!isMatch) {
         return { success: false, message: "Tài khoản hoặc mật khẩu không chính xác!" };
     }
 
-    // Thành công -> Tạo JWT
+    // Tạo JWT Token
     const token = jwt.sign(
-        { 
-            user_id: user.user_id, 
-            username: user.username, 
-            role: user.role 
+        {
+            user_id: user.user_id,
+            username: user.username,
+            email: user.email,
+            role: user.role
         },
-        process.env.JWT_SECRET,
+        process.env.JWT_SECRET || 'super_secret_key',
         { expiresIn: '7d' }
     );
 
-    // Xóa password khỏi object để bảo mật
+    // Thành công thì xóa password khỏi object để bảo mật
     delete user.password_hash;
-    
-    return { 
-        success: true, 
-        user: user,
-        token: token
-    };
+    return { success: true, user: user, token: token };
 };
 
-module.exports = { verifyUser };
+module.exports = { verifyUser };
