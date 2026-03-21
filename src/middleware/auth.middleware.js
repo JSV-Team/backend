@@ -6,7 +6,23 @@ const jwt = require('jsonwebtoken');
 const verifyToken = (req, res, next) => {
     // Lấy token từ header Authorization (dạng: Bearer token)
     const authHeader = req.headers.authorization;
-    const token = authHeader && authHeader.split(' ')[1];
+    
+    if (!authHeader) {
+        return res.status(401).json({
+            success: false,
+            message: "Bạn cần đăng nhập để thực hiện hành động này!"
+        });
+    }
+    
+    // Check for Bearer scheme
+    if (!authHeader.startsWith('Bearer ')) {
+        return res.status(401).json({
+            success: false,
+            message: "Bạn cần đăng nhập để thực hiện hành động này!"
+        });
+    }
+    
+    const token = authHeader.split(' ')[1];
 
     if (!token) {
         return res.status(401).json({

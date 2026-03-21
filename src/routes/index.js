@@ -12,6 +12,7 @@ const loginRoutes = require('./login.route');
 const uploadRoutes = require('./upload.route');
 const chatRoutes = require('./chat.route');
 const authRoutes = require('./auth.routes');
+const matchRoutes = require('./match.routes');
 
 // Register routes
 router.use('/profile', profileRoutes);
@@ -24,5 +25,6 @@ router.use('/activities', activityRoutes);
 router.use('/upload', uploadRoutes);
 router.use('/chat', chatRoutes);
 router.use('/auth', authRoutes);
+router.use('/match', matchRoutes);
 
 module.exports = router;
