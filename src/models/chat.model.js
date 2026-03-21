@@ -81,6 +81,38 @@ const getUserConversations = async (userId) => {
                      LIMIT 1)
                 ELSE a.title 
              END AS activity_title,
+             CASE 
+                WHEN c.conversation_type = 'private' THEN 
+                    (SELECT u.avatar_url 
+                     FROM conversation_members cm2 
+                     JOIN users u ON cm2.user_id = u.user_id 
+                     WHERE cm2.conversation_id = c.conversation_id AND cm2.user_id != $1
+                     LIMIT 1)
+                ELSE NULL
+             END AS other_avatar_url,
+             CASE 
+                WHEN c.conversation_type = 'private' THEN 
+                    (SELECT cm2.user_id 
+                     FROM conversation_members cm2 
+                     WHERE cm2.conversation_id = c.conversation_id AND cm2.user_id != $1
+                     LIMIT 1)
+                ELSE NULL
+             END AS other_user_id,
+             CASE 
+                WHEN c.conversation_type = 'private' THEN 
+                    (SELECT 
+                        CASE WHEN EXISTS (
+                            SELECT 1 FROM follows f1 
+                            WHERE f1.follower_id = $1 AND f1.following_id = cm2.user_id
+                        ) AND EXISTS (
+                            SELECT 1 FROM follows f2 
+                            WHERE f2.follower_id = cm2.user_id AND f2.following_id = $1
+                        ) THEN 1 ELSE 0 END
+                     FROM conversation_members cm2 
+                     WHERE cm2.conversation_id = c.conversation_id AND cm2.user_id != $1
+                     LIMIT 1)
+                ELSE 0
+             END AS is_friend,
              cm.role AS user_role,
              (
                 SELECT CASE WHEN msg_type = 'image' THEN '[Hình ảnh]' ELSE content END
@@ -172,4 +204,3 @@ module.exports = {
     getConversationMembers,
     getPrivateConversation
 };
-

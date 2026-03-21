@@ -40,9 +40,12 @@ const getPublicProfile = async (req, res) => {
                 user_id: profile.user_id,
                 username: profile.username,
                 full_name: profile.full_name,
+                email: profile.email,
                 avatar_url: profile.avatar_url,
                 bio: profile.bio,
                 location: profile.location,
+                gender: profile.gender,
+                dob: profile.dob,
                 reputation_score: profile.reputation_score,
                 created_at: profile.created_at,
                 interests
@@ -127,7 +130,7 @@ const changePassword = async (req, res) => {
 
         // Lấy password_hash từ DB
         const pool = getPool();
-        const result = await pool.query('SELECT password_hash FROM Users WHERE user_id = $1', [userId]);
+        const result = await pool.query('SELECT password_hash FROM users WHERE user_id = $1', [userId]);
         
         if (result.rows.length === 0) {
             return res.status(404).json({
@@ -152,7 +155,7 @@ const changePassword = async (req, res) => {
         const newPasswordHash = await bcrypt.hash(newPassword, 10);
 
         // Cập nhật mật khẩu
-        await pool.query('UPDATE Users SET password_hash = $1 WHERE user_id = $2', [newPasswordHash, userId]);
+        await pool.query('UPDATE users SET password_hash = $1 WHERE user_id = $2', [newPasswordHash, userId]);
 
         return res.status(200).json({
             success: true,

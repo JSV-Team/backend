@@ -37,6 +37,11 @@ router.get('/', activityController.getActivities);
 // =============================================
 router.post('/join', activityController.joinActivity);
 // =============================================
+// GET /api/activities/user/:userId
+// =============================================
+router.get('/user/:userId', activityController.getUserActivities);
+
+// =============================================
 // DELETE /api/activities/:id
 // =============================================
 router.delete('/:id', activityController.deleteActivity);
