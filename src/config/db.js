@@ -6,10 +6,12 @@ console.log("DB_USER provided:", process.env.DB_USER ? `Yes (${process.env.DB_US
 console.log("DB_HOST provided:", process.env.DB_HOST ? `Yes (${process.env.DB_HOST})` : "No");
 console.log("DATABASE_URL provided:", process.env.DATABASE_URL ? "Yes" : "No");
 
+const isLocal = !process.env.DB_HOST || process.env.DB_HOST.includes("localhost");
+
 const dbConfig = process.env.DATABASE_URL 
   ? {
       connectionString: process.env.DATABASE_URL,
-      ssl: { rejectUnauthorized: false }
+      ssl: process.env.DATABASE_URL.includes("localhost") ? false : { rejectUnauthorized: false }
     }
   : {
       user: process.env.DB_USER,
@@ -17,7 +19,7 @@ const dbConfig = process.env.DATABASE_URL
       database: process.env.DB_NAME,
       password: process.env.DB_PASSWORD,
       port: process.env.DB_PORT || 5432,
-      ssl: { rejectUnauthorized: false }
+      ssl: isLocal ? false : { rejectUnauthorized: false }
     };
 
 const pool = new Pool(dbConfig);
