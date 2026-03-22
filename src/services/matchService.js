@@ -20,13 +20,46 @@ const createMatchSession = async (userOne, userTwo, matchType = 'interest') => {
     const userTwoId = sortedUsers[1];
 
     const pool = getPool();
-    const query = `
+    
+    // Check if match session already exists
+    const checkQuery = `
+        SELECT match_id, user_one, user_two, match_type, status, created_at
+        FROM match_sessions
+        WHERE user_one = $1 AND user_two = $2;
+    `;
+    
+    const existingMatch = await pool.query(checkQuery, [userOneId, userTwoId]);
+    
+    // If match already exists, return it (or update status to active if needed)
+    if (existingMatch.rows.length > 0) {
+        const match = existingMatch.rows[0];
+        console.log(`♻️  Match session already exists: ${match.match_id} (status: ${match.status})`);
+        
+        // If match is not active, reactivate it
+        if (match.status !== 'active') {
+            const updateQuery = `
+                UPDATE match_sessions
+                SET status = 'active', created_at = NOW()
+                WHERE match_id = $1
+                RETURNING match_id, user_one, user_two, match_type, status, created_at;
+            `;
+            const updated = await pool.query(updateQuery, [match.match_id]);
+            console.log(`✅ Reactivated match session: ${match.match_id}`);
+            return updated.rows[0];
+        }
+        
+        return match;
+    }
+    
+    // Create new match session
+    const insertQuery = `
         INSERT INTO match_sessions (user_one, user_two, match_type, requested_by, status, created_at)
         VALUES ($1, $2, $3, NULL, 'active', NOW())
         RETURNING match_id, user_one, user_two, match_type, status, created_at;
     `;
     
-    const result = await pool.query(query, [userOneId, userTwoId, matchType]);
+    const result = await pool.query(insertQuery, [userOneId, userTwoId, matchType]);
+    console.log(`✅ Created new match session: ${result.rows[0].match_id}`);
     return result.rows[0];
 };
 
@@ -34,7 +67,7 @@ const createMatchSession = async (userOne, userTwo, matchType = 'interest') => {
  * Create a private conversation between two users
  * @param {number} userOneId - First user ID
  * @param {number} userTwoId - Second user ID
- * @returns {Promise<number>} Created conversation ID
+ * @returns {Promise<number>} Created or existing conversation ID
  */
 const createConversation = async (userOneId, userTwoId) => {
     // Do not create conversation with themselves
@@ -42,8 +75,41 @@ const createConversation = async (userOneId, userTwoId) => {
         throw new Error('Không thể tạo cuộc trò chuyện với chính mình');
     }
 
-    // Create conversation with type 'private' and group_lifetime 'permanent'
+    const pool = getPool();
+    
+    // Check if conversation already exists between these two users
+    const checkQuery = `
+        SELECT c.conversation_id
+        FROM conversations c
+        WHERE c.conversation_type = 'private'
+        AND EXISTS (
+            SELECT 1 FROM conversation_members cm1
+            WHERE cm1.conversation_id = c.conversation_id
+            AND cm1.user_id = $1
+        )
+        AND EXISTS (
+            SELECT 1 FROM conversation_members cm2
+            WHERE cm2.conversation_id = c.conversation_id
+            AND cm2.user_id = $2
+        )
+        AND (
+            SELECT COUNT(*) FROM conversation_members cm
+            WHERE cm.conversation_id = c.conversation_id
+        ) = 2
+        LIMIT 1;
+    `;
+    
+    const existingConv = await pool.query(checkQuery, [userOneId, userTwoId]);
+    
+    if (existingConv.rows.length > 0) {
+        const conversationId = existingConv.rows[0].conversation_id;
+        console.log(`♻️  Conversation already exists: ${conversationId}`);
+        return conversationId;
+    }
+    
+    // Create new conversation with type 'private' and group_lifetime 'permanent'
     const conversationId = await chatModel.createConversation('private', null);
+    console.log(`✅ Created new conversation: ${conversationId}`);
     
     // Add both users as members
     await chatModel.addMember(conversationId, userOneId, 'member');

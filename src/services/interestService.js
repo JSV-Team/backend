@@ -52,29 +52,39 @@ async function getCommonInterests(userId1, userId2) {
  * @returns {Promise<number>} - Điểm tương đồng (0-100)
  */
 async function calculateInterestScore(userId1, userId2) {
+  console.log(`      🔢 Calculating interest score: User ${userId1} vs User ${userId2}`);
+  
   // Lấy tất cả interest của user 1
   const user1Interests = await getUserInterests(userId1);
   const interestIds1 = new Set(user1Interests.map(i => i.interest_id));
+  console.log(`         User ${userId1} interests: [${user1Interests.map(i => i.name).join(', ')}]`);
   
   // Lấy tất cả interest của user 2
   const user2Interests = await getUserInterests(userId2);
   const interestIds2 = new Set(user2Interests.map(i => i.interest_id));
+  console.log(`         User ${userId2} interests: [${user2Interests.map(i => i.name).join(', ')}]`);
   
   // Tính sở thích chung
   const commonInterests = [...interestIds1].filter(id => interestIds2.has(id));
   const commonCount = commonInterests.length;
+  console.log(`         Common interests: ${commonCount}`);
   
   // Tính tổng sở thích unique của cả hai người
   const uniqueInterests = new Set([...interestIds1, ...interestIds2]);
   const totalUnique = uniqueInterests.size;
+  console.log(`         Total unique interests: ${totalUnique}`);
   
   // Tính điểm (tránh chia cho 0)
   if (totalUnique === 0) {
+    console.log(`         ⚠️  Both users have 0 interests - score: 0`);
     return 0;
   }
   
   const score = (commonCount / totalUnique) * 100;
-  return Math.round(score * 100) / 100; // Làm tròn 2 chữ số thập phân
+  const roundedScore = Math.round(score * 100) / 100;
+  console.log(`         📊 Interest score: ${roundedScore}% (${commonCount}/${totalUnique})`);
+  
+  return roundedScore; // Làm tròn 2 chữ số thập phân
 }
 
 module.exports = {
