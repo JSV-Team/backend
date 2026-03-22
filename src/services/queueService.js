@@ -113,6 +113,7 @@ async function joinQueue(userId, userInfo = {}) {
     
     // Get full user info for match notification
     const fullUserInfo = await matchService.getUserInfo(userId);
+    console.log(`📸 User ${userId} info from database:`, fullUserInfo);
 
     // Create queue entry
     const queueEntry = {
@@ -130,6 +131,12 @@ async function joinQueue(userId, userInfo = {}) {
         bio: fullUserInfo.bio
       }
     };
+    
+    console.log(`📦 Queue entry created for user ${userId}:`, {
+      userId: queueEntry.userId,
+      avatar_url: queueEntry.userInfo.avatar_url,
+      username: queueEntry.userInfo.username
+    });
 
     // Add to queue
     const added = matchQueue.addUser(queueEntry);

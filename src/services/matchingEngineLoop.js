@@ -56,11 +56,21 @@ async function runMatchingCycle() {
   try {
     // Get users from queue
     const queueInfo = queueService.getQueueInfo();
+    
+    console.log(`\n🔄 ========== MATCHING CYCLE START ==========`);
+    console.log(`📊 Queue size: ${queueInfo.data?.size || 0}`);
+    
     if (!queueInfo.success || queueInfo.data.size < 2) {
+      console.log(`⏭️  Skipping cycle - not enough users (need at least 2)`);
+      console.log(`🔄 ========== MATCHING CYCLE END ==========\n`);
       return; // Not enough users to match
     }
 
     const users = queueInfo.data.users;
+    console.log(`\n👥 Users in queue (${users.length}):`);
+    users.forEach((u, idx) => {
+      console.log(`   ${idx + 1}. User ${u.userId}: ${u.interests?.length || 0} interests - [${u.interests?.join(', ') || 'none'}]`);
+    });
     
     // Convert queue users to the format expected by matchEngine
     const usersForMatching = users.map(u => ({
@@ -69,11 +79,20 @@ async function runMatchingCycle() {
     }));
 
     // Find best match pair
+    console.log(`\n🔍 Finding best match among ${usersForMatching.length} users...`);
     const bestMatch = await matchingEngine.findBestMatch(usersForMatching);
     
     if (!bestMatch) {
+      console.log(`❌ No valid match found (no pairs meet minimum score threshold)`);
+      console.log(`💡 Tip: Check if users have common interests`);
+      console.log(`🔄 ========== MATCHING CYCLE END ==========\n`);
       return; // No valid match found
     }
+
+    console.log(`\n✅ MATCH FOUND!`);
+    console.log(`   User ${bestMatch.user1Id} <-> User ${bestMatch.user2Id}`);
+    console.log(`   Score: ${bestMatch.score}%`);
+    console.log(`   Common interests: ${bestMatch.commonInterests?.length || 0}`);
 
     const { user1Id, user2Id } = bestMatch;
 
@@ -101,10 +120,10 @@ async function runMatchingCycle() {
       matchId: matchSession.match_id,
       conversationId: conversationId,
       matchedUser: {
-        userId: user2Id,
+        user_id: user2Id,
         username: user2Data.userInfo?.username,
-        fullName: user2Data.userInfo?.full_name,
-        avatarUrl: user2Data.userInfo?.avatar_url,
+        full_name: user2Data.userInfo?.full_name,
+        avatar_url: user2Data.userInfo?.avatar_url,
         bio: user2Data.userInfo?.bio
       },
       score: bestMatch.score,
@@ -115,15 +134,24 @@ async function runMatchingCycle() {
       matchId: matchSession.match_id,
       conversationId: conversationId,
       matchedUser: {
-        userId: user1Id,
+        user_id: user1Id,
         username: user1Data.userInfo?.username,
-        fullName: user1Data.userInfo?.full_name,
-        avatarUrl: user1Data.userInfo?.avatar_url,
+        full_name: user1Data.userInfo?.full_name,
+        avatar_url: user1Data.userInfo?.avatar_url,
         bio: user1Data.userInfo?.bio
       },
       score: bestMatch.score,
       commonInterests: bestMatch.commonInterests
     };
+
+    console.log(`📤 Emitting match:found to user ${user1Id}:`, {
+      matchedUser: matchData.matchedUser.username,
+      avatar_url: matchData.matchedUser.avatar_url
+    });
+    console.log(`📤 Emitting match:found to user ${user2Id}:`, {
+      matchedUser: matchData1.matchedUser.username,
+      avatar_url: matchData1.matchedUser.avatar_url
+    });
 
     // Emit to user1
     if (user1Data.socketId && ioInstance) {
@@ -135,10 +163,13 @@ async function runMatchingCycle() {
       ioInstance.to(user2Data.socketId).emit('match:found', matchData1);
     }
 
-    console.log(`Match created: User ${user1Id} <-> User ${user2Id}, Score: ${bestMatch.score}`);
+    console.log(`\n🎉 Match successfully created and emitted to both users!`);
+    console.log(`🔄 ========== MATCHING CYCLE END ==========\n`);
 
   } catch (error) {
-    console.error('Error in matching cycle:', error);
+    console.error('\n❌ ERROR in matching cycle:', error);
+    console.error('Stack trace:', error.stack);
+    console.log(`🔄 ========== MATCHING CYCLE END (WITH ERROR) ==========\n`);
   }
 }
 

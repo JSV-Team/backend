@@ -173,7 +173,7 @@ CREATE TABLE match_sessions (
 
     CONSTRAINT uq_match           UNIQUE (user_one, user_two),
     CONSTRAINT chk_match_order    CHECK  (user_one < user_two),
-    CONSTRAINT chk_match_type     CHECK  (match_type IN ('random', 'selective')),
+    CONSTRAINT chk_match_type     CHECK  (match_type IN ('random', 'selective', 'interest')),
     CONSTRAINT chk_match_status   CHECK  (status     IN ('pending', 'active', 'rejected', 'ended')),
 
     CONSTRAINT fk_match_user_one   FOREIGN KEY (user_one)     REFERENCES users(user_id),
