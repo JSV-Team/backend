@@ -426,17 +426,40 @@ const getDetailedStatistics = async (req, res) => {
         let finalMatchData = matchTrendResult.rows;
 
         const interestsResult = await pool.query(`
-            SELECT i.name, COUNT(*)::int as value 
-            FROM activity_tags at2
-            JOIN interests i ON at2.interest_id = i.interest_id
-            GROUP BY i.name 
+            SELECT 
+                i.name, 
+                COUNT(ui.interest_id)::int as value 
+            FROM interests i
+            JOIN user_interests ui ON i.interest_id = ui.interest_id
+            -- "Emerging": interests added to profiles in the last 30 days
+            WHERE ui.created_at >= NOW() - INTERVAL '30 days'
+            GROUP BY i.interest_id, i.name 
             ORDER BY value DESC
             LIMIT 6
         `);
-        let interests = interestsResult.rows.length > 0 ? interestsResult.rows : [
-            { name: 'Thể thao', value: 145 }, { name: 'Du lịch', value: 98 },
-            { name: 'Âm nhạc', value: 65 }, { name: 'Nấu ăn', value: 54 }
-        ];
+
+        let interests = interestsResult.rows;
+
+        // Fallback to all-time popularity if no recent activity
+        if (interests.length === 0) {
+            const allTimeResult = await pool.query(`
+                SELECT i.name, COUNT(ui.user_id)::int as value 
+                FROM interests i
+                JOIN user_interests ui ON i.interest_id = ui.interest_id
+                GROUP BY i.interest_id, i.name 
+                ORDER BY value DESC
+                LIMIT 6
+            `);
+            interests = allTimeResult.rows;
+        }
+
+        // Mock data fallback if still empty
+        if (interests.length === 0) {
+            interests = [
+                { name: 'Âm nhạc', value: 145 }, { name: 'Du lịch', value: 98 },
+                { name: 'Bóng đá', value: 65 }, { name: 'Coding', value: 54 }
+            ];
+        }
 
         res.json({
             success: true,
@@ -557,9 +580,29 @@ const deleteBannedKeyword = async (req, res) => {
     }
 };
 
+const getUserInterestsReport = async (req, res) => {
+    try {
+        const pool = getPool();
+        const result = await pool.query(`
+            SELECT u.user_id, u.full_name, u.avatar_url, 
+                   json_agg(i.name) as interests
+            FROM users u
+            JOIN user_interests ui ON u.user_id = ui.user_id
+            JOIN interests i ON ui.interest_id = i.interest_id
+            GROUP BY u.user_id, u.full_name, u.avatar_url
+            ORDER BY u.full_name
+        `);
+        res.json({ success: true, data: result.rows });
+    } catch (error) {
+        console.error("GetUserInterestsReport Error:", error);
+        res.status(500).json({ success: false, message: "Lỗi server!" });
+    }
+};
+
 module.exports = {
     getAdminStats, getAllUsers, toggleUserStatus, toggleUserLock,
     getAllActivities, updateActivityStatus, getAllReports, updateReportStatus,
     getDetailedStatistics, searchAdmin, getSystemSettings, updateSystemSettings,
-    getBannedKeywords, addBannedKeyword, deleteBannedKeyword
+    getBannedKeywords, addBannedKeyword, deleteBannedKeyword,
+    getUserInterestsReport
 };

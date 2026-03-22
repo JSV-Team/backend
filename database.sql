@@ -72,6 +72,7 @@ CREATE TABLE interests (
 CREATE TABLE user_interests (
     user_id     INT NOT NULL,
     interest_id INT NOT NULL,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 
     CONSTRAINT pk_user_interests          PRIMARY KEY (user_id, interest_id),
     CONSTRAINT fk_user_interests_user     FOREIGN KEY (user_id)     REFERENCES users(user_id)     ON DELETE CASCADE,
