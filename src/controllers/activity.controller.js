@@ -45,16 +45,8 @@ const getActivities = asyncHandler(async (req, res) => {
     }
 });
 
-
-
 const joinActivity = asyncHandler(async (req, res) => {
-    const { activityId } = req.body;
-    const userId = req.user?.user_id; // Get from authenticated user
-    
-    if (!userId) {
-        return res.status(401).json({ message: 'Vui lòng đăng nhập để tham gia hoạt động' });
-    }
-    
+    const { activityId, userId } = req.body;
     try {
         const requestId = await activityService.joinActivity(activityId, userId);
         res.status(201).json({
@@ -88,13 +80,12 @@ const rejectActivityRequest = asyncHandler(async (req, res) => {
     try {
         const requestId = parseInt(req.params.id);
         const data = await activityService.rejectActivityRequest(requestId);
-        res.json({ message: 'Đã từ chối yêu cầu thành công!', data });
+        res.json({ message: 'Đã từ chối yêu cầu.', data });
     } catch (error) {
         console.error('Lỗi khi từ chối yêu cầu:', error);
         res.status(500).json({ message: error.message || 'Lỗi Server' });
     }
 });
-
 const deleteActivity = asyncHandler(async (req, res) => {
     const activityId = parseInt(req.params.id);
     const userId = req.body.userId || parseInt(req.query.userId);
@@ -119,14 +110,18 @@ const deleteActivity = asyncHandler(async (req, res) => {
     }
 });
 
-const getUserActivities = asyncHandler(async (req, res) => {
+const createActivity = asyncHandler(async (req, res) => {
     try {
-        const userId = parseInt(req.params.userId);
-        if (!userId) return res.status(400).json({ message: 'Thiếu userId' });
-        const result = await activityService.getUserActivities(userId);
-        res.json(result);
+        const activityData = req.body;
+        // Kiểm tra cơ bản
+        if (!activityData.user_id || !activityData.title) {
+            return res.status(400).json({ message: 'Thiếu thông tin user_id hoặc title' });
+        }
+        
+        const newActivityId = await activityService.createActivity(activityData);
+        res.status(201).json({ message: 'Tạo hoạt động thành công', activity_id: newActivityId });
     } catch (error) {
-        console.error('Lỗi khi lấy user activities:', error);
+        console.error('Lỗi khi tạo hoạt động:', error);
         res.status(500).json({ message: 'Lỗi Server' });
     }
 });
@@ -137,8 +132,8 @@ module.exports = {
     getActivities,
     joinActivity,
     approveActivityRequest,
-    rejectActivityRequest,
     getPendingApprovals,
+    rejectActivityRequest,
     deleteActivity,
-    getUserActivities
+    createActivity
 };
