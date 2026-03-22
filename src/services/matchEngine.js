@@ -1,0 +1,233 @@
+const interestService = require('./interestService');
+
+/**
+ * MatchingEngine - Core matching algorithm for interest-based matching
+ * Implements scoring logic with wait time bonus and minimum score threshold
+ */
+class MatchingEngine {
+  constructor(options = {}) {
+    this.minScoreThreshold = options.minScoreThreshold || 0;
+    this.waitTimeBonusWeight = options.waitTimeBonusWeight || 0.1;
+  }
+
+  /**
+   * Calculate match score between two users
+   * Uses interestService.calculateInterestScore() and adds wait time bonus
+   * @param {Object} user1 - First user object
+   * @param {Object} user2 - Second user object
+   * @returns {Promise<Object>} - Match result with score and details
+   */
+  async calculateMatchScore(user1, user2) {
+    // Use interestService to calculate base interest score
+    const interestScore = await interestService.calculateInterestScore(
+      user1.userId,
+      user2.userId
+    );
+
+    // If no common interests, return score 0 (below threshold)
+    if (interestScore === 0) {
+      return {
+        user1Id: user1.userId,
+        user2Id: user2.userId,
+        score: 0,
+        interestScore: 0,
+        waitTimeBonus: 0,
+        commonInterests: [],
+        totalUniqueInterests: 0,
+      };
+    }
+
+    // Calculate wait time bonus
+    const now = new Date();
+    const user1WaitTime = (now - new Date(user1.joinedAt)) / 1000; // in seconds
+    const user2WaitTime = (now - new Date(user2.joinedAt)) / 1000;
+    const maxWaitTime = Math.max(user1WaitTime, user2WaitTime);
+
+    // Normalize wait time bonus (max 120 seconds = full bonus)
+    const normalizedWaitTime = Math.min(maxWaitTime / 120, 1);
+    const waitTimeBonus = normalizedWaitTime * this.waitTimeBonusWeight * 100;
+
+    // Total score = interest score + wait time bonus
+    const totalScore = Math.min(interestScore + waitTimeBonus, 100);
+
+    // Get common interests for display
+    const commonInterests = await interestService.getCommonInterests(
+      user1.userId,
+      user2.userId
+    );
+
+    // Get total unique interests
+    const user1Interests = await interestService.getUserInterests(user1.userId);
+    const user2Interests = await interestService.getUserInterests(user2.userId);
+    const allInterests = new Set([
+      ...user1Interests.map(i => i.interest_id),
+      ...user2Interests.map(i => i.interest_id),
+    ]);
+
+    return {
+      user1Id: user1.userId,
+      user2Id: user2.userId,
+      score: Math.round(totalScore * 100) / 100,
+      interestScore: Math.round(interestScore * 100) / 100,
+      waitTimeBonus: Math.round(waitTimeBonus * 100) / 100,
+      commonInterests,
+      totalUniqueInterests: allInterests.size,
+    };
+  }
+
+  /**
+   * Find the best match pair from a list of users
+   * Prioritizes by score (interest + wait time bonus), then by wait time
+   * @param {Array} users - Array of user objects in the queue
+   * @returns {Promise<Object|null>} - Best match pair or null if no valid match
+   */
+  async findBestMatch(users) {
+    if (!users || users.length < 2) {
+      return null;
+    }
+
+    const validPairs = [];
+
+    // Evaluate all possible pairs
+    for (let i = 0; i < users.length; i++) {
+      for (let j = i + 1; j < users.length; j++) {
+        const user1 = users[i];
+        const user2 = users[j];
+
+        // Skip self-matching
+        if (user1.userId === user2.userId) {
+          continue;
+        }
+
+        // Calculate match score
+        const matchResult = await this.calculateMatchScore(user1, user2);
+
+        // Only consider pairs that meet minimum score threshold
+        if (matchResult.score > this.minScoreThreshold) {
+          validPairs.push(matchResult);
+        }
+      }
+    }
+
+    if (validPairs.length === 0) {
+      return null;
+    }
+
+    // Sort by score (descending), then by wait time (descending)
+    validPairs.sort((a, b) => {
+      // First by score
+      if (b.score !== a.score) {
+        return b.score - a.score;
+      }
+      // Then by wait time bonus (users waiting longer get priority)
+      return b.waitTimeBonus - a.waitTimeBonus;
+    });
+
+    return validPairs[0];
+  }
+
+  /**
+   * Find multiple best match pairs from the queue
+   * Useful for batch processing
+   * @param {Array} users - Array of user objects in the queue
+   * @param {number} maxPairs - Maximum number of pairs to return
+   * @returns {Promise<Array>} - Array of best match pairs
+   */
+  async findBestMatches(users, maxPairs = 10) {
+    if (!users || users.length < 2) {
+      return [];
+    }
+
+    const allPairs = [];
+
+    // Evaluate all possible pairs
+    for (let i = 0; i < users.length; i++) {
+      for (let j = i + 1; j < users.length; j++) {
+        const user1 = users[i];
+        const user2 = users[j];
+
+        if (user1.userId === user2.userId) {
+          continue;
+        }
+
+        const matchResult = await this.calculateMatchScore(user1, user2);
+
+        if (matchResult.score > this.minScoreThreshold) {
+          allPairs.push(matchResult);
+        }
+      }
+    }
+
+    if (allPairs.length === 0) {
+      return [];
+    }
+
+    // Sort by score descending
+    allPairs.sort((a, b) => b.score - a.score);
+
+    // Return top pairs, ensuring no user appears in multiple pairs
+    const matchedUserIds = new Set();
+    const result = [];
+
+    for (const pair of allPairs) {
+      if (
+        !matchedUserIds.has(pair.user1Id) &&
+        !matchedUserIds.has(pair.user2Id)
+      ) {
+        result.push(pair);
+        matchedUserIds.add(pair.user1Id);
+        matchedUserIds.add(pair.user2Id);
+
+        if (result.length >= maxPairs) {
+          break;
+        }
+      }
+    }
+
+    return result;
+  }
+
+  /**
+   * Get match statistics for a list of users
+   * @param {Array} users - Array of user objects
+   * @returns {Promise<Object>} - Statistics object
+   */
+  async getMatchStats(users) {
+    if (!users || users.length < 2) {
+      return {
+        totalPairs: 0,
+        validPairs: 0,
+        averageScore: 0,
+        highestScore: 0,
+        lowestScore: 0,
+      };
+    }
+
+    const scores = [];
+
+    for (let i = 0; i < users.length; i++) {
+      for (let j = i + 1; j < users.length; j++) {
+        if (users[i].userId === users[j].userId) {
+          continue;
+        }
+
+        const matchResult = await this.calculateMatchScore(users[i], users[j]);
+        scores.push(matchResult.score);
+      }
+    }
+
+    const validScores = scores.filter(s => s > this.minScoreThreshold);
+
+    return {
+      totalPairs: scores.length,
+      validPairs: validScores.length,
+      averageScore: validScores.length > 0
+        ? Math.round((validScores.reduce((a, b) => a + b, 0) / validScores.length) * 100) / 100
+        : 0,
+      highestScore: validScores.length > 0 ? Math.max(...validScores) : 0,
+      lowestScore: validScores.length > 0 ? Math.min(...validScores) : 0,
+    };
+  }
+}
+
+module.exports = MatchingEngine;

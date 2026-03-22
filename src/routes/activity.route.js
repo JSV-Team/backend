@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const activityController = require('../controllers/activity.controller');
+const { verifyToken } = require('../middlewares/auth.middleware');
 
 // =============================================
 // GET /api/activities/pending-activities?userId=X
@@ -33,9 +34,9 @@ router.patch('/pending-activities/:id/reject', activityController.rejectActivity
 router.get('/', activityController.getActivities);
 
 // =============================================
-// POST /api/activities/join
+// POST /api/activities/join (Protected)
 // =============================================
-router.post('/join', activityController.joinActivity);
+router.post('/join', verifyToken, activityController.joinActivity);
 // =============================================
 // GET /api/activities/user/:userId
 // =============================================
