@@ -37,10 +37,6 @@ router.get('/', activityController.getActivities);
 // POST /api/activities/join (Protected)
 // =============================================
 router.post('/join', verifyToken, activityController.joinActivity);
-// =============================================
-// GET /api/activities/user/:userId
-// =============================================
-router.get('/user/:userId', activityController.getUserActivities);
 
 // =============================================
 // DELETE /api/activities/:id

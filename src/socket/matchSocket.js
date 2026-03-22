@@ -234,6 +234,12 @@ function setupMatchSocket(io, socket) {
             console.log(`❌ User disconnected: ${socket.userId}`);
             if (socket.userId) {
                 onlineUsers.delete(socket.userId);
+                
+                // Remove user from queue if they're in it
+                if (queueService.isUserInQueue(socket.userId)) {
+                    console.log(`🧹 Cleaning up: Removing user ${socket.userId} from queue`);
+                    queueService.cancelQueue(socket.userId);
+                }
             }
         });
 
