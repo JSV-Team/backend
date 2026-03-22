@@ -585,10 +585,10 @@ const getUserInterestsReport = async (req, res) => {
         const pool = getPool();
         const result = await pool.query(`
             SELECT u.user_id, u.full_name, u.avatar_url, 
-                   json_agg(i.name) as interests
+                   COALESCE(json_agg(i.name) FILTER (WHERE i.name IS NOT NULL), '[]'::json) as interests
             FROM users u
-            JOIN user_interests ui ON u.user_id = ui.user_id
-            JOIN interests i ON ui.interest_id = i.interest_id
+            LEFT JOIN user_interests ui ON u.user_id = ui.user_id
+            LEFT JOIN interests i ON ui.interest_id = i.interest_id
             GROUP BY u.user_id, u.full_name, u.avatar_url
             ORDER BY u.full_name
         `);
