@@ -48,7 +48,13 @@ const getActivities = asyncHandler(async (req, res) => {
 
 
 const joinActivity = asyncHandler(async (req, res) => {
-    const { activityId, userId } = req.body;
+    const { activityId } = req.body;
+    const userId = req.user?.user_id; // Get from authenticated user
+    
+    if (!userId) {
+        return res.status(401).json({ message: 'Vui lòng đăng nhập để tham gia hoạt động' });
+    }
+    
     try {
         const requestId = await activityService.joinActivity(activityId, userId);
         res.status(201).json({
