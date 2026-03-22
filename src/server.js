@@ -29,8 +29,11 @@ const startServer = async () => {
       await pool.query(`
         ALTER TABLE Conversations DROP CONSTRAINT IF EXISTS CHK_Conversation_Type;
         ALTER TABLE Conversations ADD CONSTRAINT CHK_Conversation_Type CHECK (conversation_type IN ('direct', 'group', 'activity', 'private'));
+        
+        ALTER TABLE activities DROP CONSTRAINT IF EXISTS chk_activities_status;
+        ALTER TABLE activities ADD CONSTRAINT chk_activities_status CHECK (status IN ('active', 'deleted', 'profile'));
       `);
-      console.log('✅ DB Constraint CHK_Conversation_Type patched for private chat');
+      console.log('✅ DB Constraints auto-patched for new features');
     } catch (dbErr) {
       console.log('⚠️ Could not patch DB Constraint:', dbErr.message);
     }

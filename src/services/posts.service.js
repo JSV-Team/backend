@@ -53,9 +53,9 @@ exports.listByUser = async (userId) => {
             cp.post_type,
             u.full_name, 
             u.avatar_url,
-            (SELECT COUNT(*) FROM post_reactions pr WHERE pr.post_id = cp.post_id) AS reactions_count,
-            (SELECT COUNT(*) FROM post_comments  pc WHERE pc.post_id = cp.post_id) AS comments_count,
-            (SELECT COUNT(*) FROM post_shares    ps WHERE ps.post_id = cp.post_id) AS shares_count
+            0 AS reactions_count,
+            0 AS comments_count,
+            0 AS shares_count
         FROM combined_posts cp
         JOIN users u ON u.user_id = cp.creator_id
         ORDER BY cp.created_at DESC

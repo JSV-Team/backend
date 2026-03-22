@@ -18,7 +18,7 @@ const getAdminStats = async (req, res) => {
         `);
 
         let { totalUsers, usersThisWeek, usersLastWeek, totalActivities, activitiesThisWeek,
-              activitiesLastWeek, pendingReports, pendingReportsThisWeek, activeUsers } = countsResult.rows[0];
+            activitiesLastWeek, pendingReports, pendingReportsThisWeek, activeUsers } = countsResult.rows[0];
 
         // Convert strings to numbers
         totalUsers = parseInt(totalUsers); usersThisWeek = parseInt(usersThisWeek);
@@ -76,8 +76,8 @@ const getAdminStats = async (req, res) => {
         `);
         let yearData = yearTrendResult.rows.map(r => ({ name: r.name, value: parseInt(r.value) }));
 
-        if (weekData.length === 0) weekData = ['Thứ 2','Thứ 3','Thứ 4','Thứ 5','Thứ 6','Thứ 7','CN'].map(n => ({ name: n, value: 0 }));
-        if (monthData.length === 0) monthData = ['Tuần 1','Tuần 2','Tuần 3','Tuần 4'].map(n => ({ name: n, value: 0 }));
+        if (weekData.length === 0) weekData = ['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'CN'].map(n => ({ name: n, value: 0 }));
+        if (monthData.length === 0) monthData = ['Tuần 1', 'Tuần 2', 'Tuần 3', 'Tuần 4'].map(n => ({ name: n, value: 0 }));
         if (yearData.length === 0) yearData = [{ name: '01/2026', value: 0 }, { name: '02/2026', value: 0 }, { name: '03/2026', value: 0 }];
 
         // Match stats
@@ -465,8 +465,13 @@ const searchAdmin = async (req, res) => {
 const getSystemSettings = async (req, res) => {
     try {
         const pool = getPool();
-        const result = await pool.query("SELECT * FROM system_config ORDER BY config_key");
-        res.json({ success: true, data: result.rows });
+        const result = await pool.query("SELECT config_key, config_value FROM system_config");
+        // Convert array of rows to flat object { key: value }
+        const data = {};
+        result.rows.forEach(row => {
+            data[row.config_key] = row.config_value;
+        });
+        res.json({ success: true, data });
     } catch (error) {
         console.error("GetSystemSettings Error:", error);
         res.status(500).json({ success: false, message: "Lỗi server!" });
@@ -531,9 +536,9 @@ const deleteBannedKeyword = async (req, res) => {
     }
 };
 
-module.exports = { 
-    getAdminStats, getAllUsers, toggleUserStatus, toggleUserLock, 
-    getAllActivities, updateActivityStatus, getAllReports, updateReportStatus, 
+module.exports = {
+    getAdminStats, getAllUsers, toggleUserStatus, toggleUserLock,
+    getAllActivities, updateActivityStatus, getAllReports, updateReportStatus,
     getDetailedStatistics, searchAdmin, getSystemSettings, updateSystemSettings,
     getBannedKeywords, addBannedKeyword, deleteBannedKeyword
 };
