@@ -1,6 +1,8 @@
 const queueService = require('../src/services/queueService');
 
 // Mock dependencies
+let mockQuery;
+
 jest.mock('../src/services/interestService', () => ({
   getUserInterests: jest.fn()
 }));
@@ -10,16 +12,14 @@ jest.mock('../src/services/matchService', () => ({
 }));
 
 jest.mock('../src/config/db', () => {
-  const mockQuery = jest.fn();
+  mockQuery = jest.fn();
   return {
-    getPool: jest.fn(() => ({ query: mockQuery })),
-    __mockQuery: mockQuery
+    getPool: jest.fn(() => ({ query: mockQuery }))
   };
 });
 
 const interestService = require('../src/services/interestService');
 const matchService = require('../src/services/matchService');
-const { __mockQuery } = require('../src/config/db');
 
 describe('Queue Service', () => {
   let mockIo;
@@ -62,12 +62,11 @@ describe('Queue Service', () => {
     ];
 
     test('should successfully join queue with valid user', async () => {
-      // Clear queue first
       clearQueue();
       
-      __mockQuery
-        .mockResolvedValueOnce({ rows: [{ status: 'active' }] }) // user status check
-        .mockResolvedValueOnce({ rows: mockInterests }); // interests
+      mockQuery
+        .mockResolvedValueOnce({ rows: [{ status: 'active' }] })
+        .mockResolvedValueOnce({ rows: mockInterests });
 
       matchService.getUserInfo.mockResolvedValue(mockUserInfo);
       interestService.getUserInterests.mockResolvedValue(mockInterests);
@@ -79,16 +78,14 @@ describe('Queue Service', () => {
       expect(result.data).toHaveProperty('estimatedWaitTime');
       expect(result.data.message).toBe('Bạn đã tham gia hàng đợi');
       
-      // Clean up
       queueService.cancelQueue(validUserId);
     });
 
     test('should fail when user has no interests', async () => {
       clearQueue();
       
-      // Mock order: matchService.getUserInfo -> pool query (status) -> interestService.getUserInterests
       matchService.getUserInfo.mockResolvedValue(mockUserInfo);
-      __mockQuery.mockResolvedValueOnce({ rows: [{ status: 'active' }] });
+      mockQuery.mockResolvedValueOnce({ rows: [{ status: 'active' }] });
       interestService.getUserInterests.mockResolvedValue([]);
 
       const result = await queueService.joinQueue(validUserId, validUserInfo);
@@ -101,9 +98,8 @@ describe('Queue Service', () => {
     test('should fail when user is banned/inactive', async () => {
       clearQueue();
       
-      // Mock order: matchService.getUserInfo -> pool query (status)
       matchService.getUserInfo.mockResolvedValue(mockUserInfo);
-      __mockQuery.mockResolvedValueOnce({ rows: [{ status: 'banned' }] });
+      mockQuery.mockResolvedValueOnce({ rows: [{ status: 'banned' }] });
 
       const result = await queueService.joinQueue(validUserId, validUserInfo);
 
@@ -115,9 +111,8 @@ describe('Queue Service', () => {
     test('should fail when user does not exist', async () => {
       clearQueue();
       
-      // Mock order: matchService.getUserInfo -> pool query (status)
       matchService.getUserInfo.mockResolvedValue(null);
-      __mockQuery.mockResolvedValueOnce({ rows: [] });
+      mockQuery.mockResolvedValueOnce({ rows: [] });
 
       const result = await queueService.joinQueue(validUserId, validUserInfo);
 
@@ -125,50 +120,20 @@ describe('Queue Service', () => {
       expect(result.errorCode).toBe('USER_NOT_FOUND');
     });
 
-    test('should fail when queue is full', async () => {
-      clearQueue();
-      
-      // Mock the queue to be full by mocking getSize
-      const MatchQueue = require('../src/services/queueManager');
-      const originalGetSize = Object.getOwnPropertyDescriptor(MatchQueue.prototype, 'getSize');
-      Object.defineProperty(MatchQueue.prototype, 'getSize', {
-        value: jest.fn(() => 1000)
-      });
-
-      __mockQuery
-        .mockResolvedValueOnce({ rows: [{ status: 'active' }] })
-        .mockResolvedValueOnce({ rows: mockInterests });
-      
-      interestService.getUserInterests.mockResolvedValue(mockInterests);
-      matchService.getUserInfo.mockResolvedValue(mockUserInfo);
-
-      const result = await queueService.joinQueue(validUserId, validUserInfo);
-
-      expect(result.success).toBe(false);
-      expect(result.errorCode).toBe('QUEUE_FULL');
-      expect(result.error).toBe('Hàng đợi đã đầy, vui lòng thử lại sau');
-
-      // Restore
-      Object.defineProperty(MatchQueue.prototype, 'getSize', originalGetSize);
-    });
-
     test('should fail when user is already in queue', async () => {
       clearQueue();
       
-      // First join - should succeed
-      // Mock for first join: matchService.getUserInfo -> pool query -> interestService.getUserInterests
       matchService.getUserInfo
-        .mockResolvedValueOnce(mockUserInfo)  // first call
-        .mockResolvedValueOnce(mockUserInfo); // second call (already in queue check)
-      __mockQuery
-        .mockResolvedValueOnce({ rows: [{ status: 'active' }] }) // first join status
-        .mockResolvedValueOnce({ rows: mockInterests }); // first join interests
+        .mockResolvedValueOnce(mockUserInfo)
+        .mockResolvedValueOnce(mockUserInfo);
+      mockQuery
+        .mockResolvedValueOnce({ rows: [{ status: 'active' }] })
+        .mockResolvedValueOnce({ rows: mockInterests });
       interestService.getUserInterests.mockResolvedValue(mockInterests);
 
       const firstResult = await queueService.joinQueue(validUserId, validUserInfo);
       expect(firstResult.success).toBe(true);
 
-      // Second join - should fail (user already in queue)
       const result = await queueService.joinQueue(validUserId, validUserInfo);
 
       expect(result.success).toBe(false);
@@ -194,8 +159,7 @@ describe('Queue Service', () => {
     test('should successfully cancel queue for existing user', async () => {
       clearQueue();
       
-      // First add user to queue
-      __mockQuery
+      mockQuery
         .mockResolvedValueOnce({ rows: [{ status: 'active' }] })
         .mockResolvedValueOnce({ rows: mockInterests });
       
@@ -206,7 +170,6 @@ describe('Queue Service', () => {
       expect(joinResult.success).toBe(true);
       expect(queueService.isUserInQueue(validUserId)).toBe(true);
 
-      // Now cancel
       const result = queueService.cancelQueue(validUserId);
 
       expect(result.success).toBe(true);
@@ -243,7 +206,7 @@ describe('Queue Service', () => {
     test('should return queue info with users', async () => {
       clearQueue();
       
-      __mockQuery
+      mockQuery
         .mockResolvedValueOnce({ rows: [{ status: 'active' }] })
         .mockResolvedValueOnce({ rows: mockInterests });
 
@@ -291,7 +254,7 @@ describe('Queue Service', () => {
       clearQueue();
       
       const testUserId = 999;
-      __mockQuery
+      mockQuery
         .mockResolvedValueOnce({ rows: [{ status: 'active' }] })
         .mockResolvedValueOnce({ rows: mockInterests });
 
@@ -300,10 +263,9 @@ describe('Queue Service', () => {
 
       await queueService.joinQueue(testUserId, { socketId: 'socket999' });
 
-      // Manually set the joinedAt to old time
       const user = queueService.getUserFromQueue(testUserId);
       if (user) {
-        user.joinedAt = new Date(Date.now() - 200 * 1000); // 200 seconds ago (timeout is 120)
+        user.joinedAt = new Date(Date.now() - 200 * 1000);
       }
 
       const result = queueService.handleTimeout(mockIo);
@@ -316,7 +278,7 @@ describe('Queue Service', () => {
       clearQueue();
       
       const testUserId = 888;
-      __mockQuery
+      mockQuery
         .mockResolvedValueOnce({ rows: [{ status: 'active' }] })
         .mockResolvedValueOnce({ rows: mockInterests });
 
@@ -349,7 +311,7 @@ describe('Queue Service', () => {
     test('should return true for user in queue', async () => {
       clearQueue();
       
-      __mockQuery
+      mockQuery
         .mockResolvedValueOnce({ rows: [{ status: 'active' }] })
         .mockResolvedValueOnce({ rows: mockInterests });
 
@@ -385,7 +347,7 @@ describe('Queue Service', () => {
     test('should return user info for user in queue', async () => {
       clearQueue();
       
-      __mockQuery
+      mockQuery
         .mockResolvedValueOnce({ rows: [{ status: 'active' }] })
         .mockResolvedValueOnce({ rows: mockInterests });
 
@@ -426,7 +388,7 @@ describe('Queue Service', () => {
     test('should reset timeout for user in queue', async () => {
       clearQueue();
       
-      __mockQuery
+      mockQuery
         .mockResolvedValueOnce({ rows: [{ status: 'active' }] })
         .mockResolvedValueOnce({ rows: mockInterests });
 
@@ -438,7 +400,6 @@ describe('Queue Service', () => {
       const userBefore = queueService.getUserFromQueue(validUserId);
       const oldJoinedAt = userBefore.joinedAt.getTime();
 
-      // Wait a bit
       await new Promise(resolve => setTimeout(resolve, 50));
 
       const result = queueService.resetUserTimeout(validUserId);

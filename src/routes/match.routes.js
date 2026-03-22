@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const matchService = require('../services/matchService');
-const { verifyToken } = require('../middleware/auth.middleware');
+const { verifyToken } = require('../middlewares/auth.middleware');
 
 // Apply auth middleware to all routes
 router.use(verifyToken);

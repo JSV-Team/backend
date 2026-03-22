@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const profileController = require('../controllers/profile.controller');
-const { verifyToken, isOwner } = require('../middleware/auth.middleware');
+const { verifyToken, isOwner } = require('../middlewares/auth.middleware');
 
 // @route   PUT /api/profile/password
 // @desc    Đổi mật khẩu
