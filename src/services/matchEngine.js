@@ -82,11 +82,15 @@ class MatchingEngine {
    * @returns {Promise<Object|null>} - Best match pair or null if no valid match
    */
   async findBestMatch(users) {
+    console.log(`\n🔎 [MatchEngine] findBestMatch called with ${users?.length || 0} users`);
+    
     if (!users || users.length < 2) {
+      console.log(`   ⚠️  Not enough users to match (need at least 2)`);
       return null;
     }
 
     const validPairs = [];
+    let totalPairsEvaluated = 0;
 
     // Evaluate all possible pairs
     for (let i = 0; i < users.length; i++) {
@@ -99,17 +103,30 @@ class MatchingEngine {
           continue;
         }
 
+        totalPairsEvaluated++;
+        
         // Calculate match score
+        console.log(`   🧮 Evaluating pair: User ${user1.userId} <-> User ${user2.userId}`);
         const matchResult = await this.calculateMatchScore(user1, user2);
+        console.log(`      Score: ${matchResult.score}% (interest: ${matchResult.interestScore}%, wait bonus: ${matchResult.waitTimeBonus}%)`);
+        console.log(`      Common interests: ${matchResult.commonInterests?.length || 0}, Threshold: ${this.minScoreThreshold}%`);
 
         // Only consider pairs that meet minimum score threshold
         if (matchResult.score > this.minScoreThreshold) {
+          console.log(`      ✅ Pair meets threshold!`);
           validPairs.push(matchResult);
+        } else {
+          console.log(`      ❌ Pair below threshold (${matchResult.score}% <= ${this.minScoreThreshold}%)`);
         }
       }
     }
 
+    console.log(`\n   📊 Evaluation complete:`);
+    console.log(`      Total pairs evaluated: ${totalPairsEvaluated}`);
+    console.log(`      Valid pairs found: ${validPairs.length}`);
+
     if (validPairs.length === 0) {
+      console.log(`   ❌ No valid pairs found\n`);
       return null;
     }
 
@@ -123,6 +140,7 @@ class MatchingEngine {
       return b.waitTimeBonus - a.waitTimeBonus;
     });
 
+    console.log(`   🏆 Best match selected: User ${validPairs[0].user1Id} <-> User ${validPairs[0].user2Id} (${validPairs[0].score}%)\n`);
     return validPairs[0];
   }
 
