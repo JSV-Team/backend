@@ -9,8 +9,9 @@ const onlineUsers = new Map();
 const setupSocket = (server) => {
     const io = socketIo(server, {
         cors: {
-            origin: "http://localhost:5173", // URL frontend Vite
-            methods: ["GET", "POST"]
+            origin: process.env.CLIENT_URL || '*', 
+            methods: ["GET", "POST", "PATCH"],
+            credentials: true
         }
     });
 
