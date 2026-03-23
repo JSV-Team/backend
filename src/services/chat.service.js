@@ -87,6 +87,18 @@ const getOrInitPrivateConversation = async (user1, user2) => {
     return conv;
 };
 
+const markConversationAsRead = async (conversationId, userId) => {
+    const isMember = await chatModel.checkMembership(conversationId, userId);
+    if (!isMember) {
+        throw new Error('Unauthorized');
+    }
+    await chatModel.markConversationAsRead(conversationId, userId);
+};
+
+const getTotalUnreadCount = async (userId) => {
+    return await chatModel.getTotalUnreadCount(userId);
+};
+
 // Kiểm tra user có thể nhắn tin cho host của activity không
 // Yêu cầu: request của user phải ở trạng thái 'accepted'
 const canMessageActivityHost = async (activityId, userId) => {
@@ -126,5 +138,7 @@ module.exports = {
     initOrJoinActivityChat,
     getConversationMembers,
     getOrInitPrivateConversation,
-    canMessageActivityHost
+    canMessageActivityHost,
+    markConversationAsRead,
+    getTotalUnreadCount
 };
