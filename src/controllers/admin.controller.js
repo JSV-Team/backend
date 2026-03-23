@@ -83,27 +83,22 @@ const getAdminStats = async (req, res) => {
         // Match stats
         const matchStatsResult = await pool.query(`
             SELECT 
-                COUNT(CASE WHEN status = 'pending' THEN 1 END) as pending,
-                COUNT(CASE WHEN status = 'active' THEN 1 END) as active,
-                COUNT(CASE WHEN status = 'rejected' THEN 1 END) as rejected,
-                COUNT(CASE WHEN status = 'ended' THEN 1 END) as ended
+                COUNT(CASE WHEN status = 'pending' THEN 1 END)::int as pending,
+                COUNT(CASE WHEN status = 'active' THEN 1 END)::int as active,
+                COUNT(CASE WHEN status = 'rejected' THEN 1 END)::int as rejected,
+                COUNT(CASE WHEN status = 'ended' THEN 1 END)::int as ended
             FROM match_sessions
         `);
-        let matchStats = {
-            pending: parseInt(matchStatsResult.rows[0].pending),
-            active: parseInt(matchStatsResult.rows[0].active),
-            rejected: parseInt(matchStatsResult.rows[0].rejected),
-            ended: parseInt(matchStatsResult.rows[0].ended),
-        };
+        let matchStats = matchStatsResult.rows[0];
 
         const matchClassResult = await pool.query(`
-            SELECT match_type as name, COUNT(*) as value 
+            SELECT match_type as name, COUNT(*)::int as value 
             FROM match_sessions 
             GROUP BY match_type
         `);
         let matchClassification = matchClassResult.rows.map(r => ({
-            name: r.name === 'random' ? 'Ngẫu nhiên' : 'Chọn lọc',
-            value: parseInt(r.value)
+            name: r.name === 'random' ? 'Ngẫu nhiên' : (r.name === 'selective' ? 'Chọn lọc' : (r.name || 'Khác')),
+            value: r.value
         }));
 
         const recentMatchesResult = await pool.query(`
@@ -118,20 +113,11 @@ const getAdminStats = async (req, res) => {
         `);
         let recentMatches = recentMatchesResult.rows.map(m => ({
             id: m.match_id,
-            pair: `${m.user1_name.split(' ').pop()} - ${m.user2_name.split(' ').pop()}`,
+            pair: `${(m.user1_name || 'N/A').split(' ').pop()} - ${(m.user2_name || 'N/A').split(' ').pop()}`,
             time: formatTimeAgo(m.created_at),
             status: m.status === 'active' ? 'Đang hoạt động' : (m.status === 'pending' ? 'Đang chờ' : (m.status === 'rejected' ? 'Từ chối' : 'Kết thúc')),
             avatars: [m.user1_avatar, m.user2_avatar]
         }));
-
-        if (!matchStats.active && !matchStats.pending) {
-            matchStats = { pending: 23, active: 89, rejected: 28, ended: 16 };
-            matchClassification = [{ name: 'Ngẫu nhiên', value: 98 }, { name: 'Chọn lọc', value: 58 }];
-            recentMatches = [
-                { id: 101, pair: 'Khoa - Hằng', time: '2 phút trước', status: 'Đang hoạt động', avatars: [] },
-                { id: 102, pair: 'Bảo - Linh', time: '15 phút trước', status: 'Đang chờ', avatars: [] }
-            ];
-        }
 
         // Reports by type
         const reportsByTypeResult = await pool.query(`
@@ -142,12 +128,6 @@ const getAdminStats = async (req, res) => {
             LIMIT 4
         `);
         let reportData = reportsByTypeResult.rows;
-        if (reportData.length === 0) {
-            reportData = [
-                { name: 'Spam', value: 35 }, { name: 'Nội dung độc hại', value: 25 },
-                { name: 'Fake news', value: 20 }, { name: 'Vi phạm quy chuẩn', value: 20 }
-            ];
-        }
 
         // Recent activities
         const recentResult = await pool.query(`
@@ -451,14 +431,6 @@ const getDetailedStatistics = async (req, res) => {
                 LIMIT 6
             `);
             interests = allTimeResult.rows;
-        }
-
-        // Mock data fallback if still empty
-        if (interests.length === 0) {
-            interests = [
-                { name: 'Âm nhạc', value: 145 }, { name: 'Du lịch', value: 98 },
-                { name: 'Bóng đá', value: 65 }, { name: 'Coding', value: 54 }
-            ];
         }
 
         res.json({
