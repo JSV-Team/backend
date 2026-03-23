@@ -4,8 +4,9 @@ const bannedKeywordModel = require('../models/bannedKeyword.model');
 /**
  * Lấy danh sách bài đăng của 1 user (bao gồm Activities và DailyStatus)
  */
-exports.listByUser = async (userId) => {
+exports.listByUser = async (userId, page = 1, limit = 15) => {
   const pool = getPool();
+  const offset = (page - 1) * limit;
   
   // Combine activities and daily_status to show in profile 'posts' tab
     const query = `
@@ -59,8 +60,9 @@ exports.listByUser = async (userId) => {
         FROM combined_posts cp
         JOIN users u ON u.user_id = cp.creator_id
         ORDER BY cp.created_at DESC
+        LIMIT $2 OFFSET $3
     `;
-    const r = await pool.query(query, [userId]);
+    const r = await pool.query(query, [userId, limit, offset]);
     return r.rows;
 };
 
@@ -70,8 +72,19 @@ exports.listByUser = async (userId) => {
 exports.createPost = async (userId, payload) => {
   console.log(`[posts.service] createPost - userId: ${userId} (${typeof userId})`);
 
+  if (payload.duration_minutes !== undefined && payload.duration_minutes !== null) {
+      if (Number(payload.duration_minutes) <= 0) {
+          throw new Error('Thời lượng phải là số dương lớn hơn 0');
+      }
+  }
+
+  const descriptionCheck = payload.description || payload.desc || "";
+  if (descriptionCheck.length > 3000) {
+      throw new Error('Văn bản mô tả quá dài (tối đa 3000 ký tự)');
+  }
+
   // Banned keyword check
-  let textToCheck = (payload.title || '') + ' ' + (payload.description || payload.desc || '') + ' ' + (payload.location || '');
+  let textToCheck = (payload.title || '') + ' ' + descriptionCheck + ' ' + (payload.location || '');
   textToCheck = textToCheck.toLowerCase();
 
   const bannedKeywords = await bannedKeywordModel.getAllBannedKeywords();

@@ -51,8 +51,9 @@ const deleteActivityRequest = async (requestId) => {
   await pool.query(query, [requestId]);
 };
 
-const getApprovedActivities = async () => {
+const getApprovedActivities = async (page = 1, limit = 15) => {
   const pool = getPool();
+  const offset = (page - 1) * limit;
   const query = `
     SELECT 
       a.activity_id AS status_id,
@@ -78,9 +79,9 @@ const getApprovedActivities = async () => {
     ) ai ON TRUE
     WHERE a.status IN ('active', 'approved', 'pending')
     ORDER BY a.created_at DESC
-    LIMIT 50
+    LIMIT $1 OFFSET $2
   `;
-  const result = await pool.query(query);
+  const result = await pool.query(query, [limit, offset]);
   return result.rows;
 };
 

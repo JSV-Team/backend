@@ -13,8 +13,8 @@ const deleteActivityRequest = async (requestId) => {
     await activityModel.deleteActivityRequest(requestId);
 };
 
-const getApprovedActivities = async () => {
-    return await activityModel.getApprovedActivities();
+const getApprovedActivities = async (page = 1, limit = 15) => {
+    return await activityModel.getApprovedActivities(page, limit);
 };
 
 const joinActivity = async (activityId, userId) => {

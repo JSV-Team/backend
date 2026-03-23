@@ -37,7 +37,9 @@ const deleteActivityRequest = asyncHandler(async (req, res) => {
 
 const getActivities = asyncHandler(async (req, res) => {
     try {
-        const result = await activityService.getApprovedActivities();
+        const page = Number(req.query.page) || 1;
+        const limit = Number(req.query.limit) || 15;
+        const result = await activityService.getApprovedActivities(page, limit);
         res.json(result);
     } catch (error) {
         console.error('Lỗi khi lấy hoạt động:', error);

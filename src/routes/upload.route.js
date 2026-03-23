@@ -28,29 +28,39 @@ const upload = multer({
     if (file.mimetype.startsWith("image/") || file.mimetype.startsWith("video/")) {
       cb(null, true);
     } else {
-      cb(new Error("Only images and videos are allowed"));
+      cb(new Error("Chỉ hỗ trợ upload định dạng hình ảnh và video hợp lệ."));
     }
   },
 });
 
 // POST /api/upload/avatar
-router.post("/avatar", upload.single("avatar"), (req, res) => {
-  if (!req.file) {
-    return res.status(400).json({ message: "No file uploaded" });
-  }
-  const url = `/uploads/${req.file.filename}`;
-  // Trả về cả url và fullUrl để frontend dễ sử dụng
-  const fullUrl = `${req.protocol}://${req.get('host')}${url}`;
-  res.json({ url, fullUrl });
+router.post("/avatar", (req, res, next) => {
+  upload.single("avatar")(req, res, (err) => {
+    if (err) {
+      return res.status(400).json({ message: err.message || 'Lỗi upload ảnh đại diện' });
+    }
+    if (!req.file) {
+      return res.status(400).json({ message: "No file uploaded" });
+    }
+    const url = `/uploads/${req.file.filename}`;
+    // Trả về cả url và fullUrl để frontend dễ sử dụng
+    const fullUrl = `${req.protocol}://${req.get('host')}${url}`;
+    res.json({ url, fullUrl });
+  });
 });
 
 // POST /api/upload/post-media (upload nhiều ảnh)
-router.post("/post-media", upload.array("media", 5), (req, res) => {
-  if (!req.files || req.files.length === 0) {
-    return res.status(400).json({ message: "No files uploaded" });
-  }
-  const urls = req.files.map(f => `/uploads/${f.filename}`);
-  res.json({ urls });
+router.post("/post-media", (req, res, next) => {
+  upload.array("media", 5)(req, res, (err) => {
+    if (err) {
+      return res.status(400).json({ message: err.message || 'Lỗi upload hình ảnh' });
+    }
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({ message: "No files uploaded" });
+    }
+    const urls = req.files.map(f => `/uploads/${f.filename}`);
+    res.json({ urls });
+  });
 });
 
 // POST /api/upload/image
