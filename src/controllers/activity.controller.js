@@ -46,7 +46,12 @@ const getActivities = asyncHandler(async (req, res) => {
 });
 
 const joinActivity = asyncHandler(async (req, res) => {
-    const { activityId, userId } = req.body;
+    const activityId = req.body.activityId || req.body.activity_id;
+    // Tìm userId từ mọi nguồn có thể (Token hoặc Body) để tránh lỗi thiếu dữ liệu
+    const userId = req.user?.user_id || req.user?.id || req.body.userId || req.body.user_id;
+    
+    console.log(`[JOIN DEBUG] activityId: ${activityId}, userId: ${userId}`);
+    
     try {
         const requestId = await activityService.joinActivity(activityId, userId);
         res.status(201).json({
