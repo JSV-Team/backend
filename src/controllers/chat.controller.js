@@ -74,6 +74,19 @@ const checkCanMessageHost = asyncHandler(async (req, res) => {
     }
 });
 
+const markAsRead = asyncHandler(async (req, res) => {
+    const { conversationId } = req.params;
+    const userId = req.body.userId || req.query.userId || 2;
+    await chatService.markConversationAsRead(conversationId, userId);
+    res.json({ message: "OK" });
+});
+
+const getUnreadCount = asyncHandler(async (req, res) => {
+    const userId = req.query.userId || 2;
+    const result = await chatService.getTotalUnreadCount(userId);
+    res.json({ unread_count: result });
+});
+
 // Logic riêng để dùng trong route kiểm tra activity request
 const getOrInitPrivateChatLogic = async (userId, partnerId, activityId = null) => {
     // Nếu có activityId, kiểm tra request đã được accepted chưa
@@ -90,5 +103,7 @@ module.exports = {
     getMembers,
     getOrInitPrivateChat,
     getOrInitPrivateChatLogic,
-    checkCanMessageHost
+    checkCanMessageHost,
+    markAsRead,
+    getUnreadCount
 };
