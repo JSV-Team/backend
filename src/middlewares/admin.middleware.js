@@ -12,22 +12,25 @@ const isAdmin = (req, res, next) => {
             });
         }
 
-        const secret = process.env.JWT_SECRET || 'vibematch_secret_key_2024';
+        const envSecret = process.env.JWT_SECRET;
+        const secret = envSecret ? envSecret.trim() : 'vibematch_secret_key_2024';
         
         jwt.verify(token, secret, (err, user) => {
             if (err) {
-                console.error("JWT Verification failed:", err.message);
+                console.error("JWT Verification failed at admin.middleware:", err.message);
                 return res.status(403).json({
                     success: false,
                     message: "Phiên đăng nhập không hợp lệ hoặc đã hết hạn."
                 });
             }
 
-            if (user.role === 'admin') {
+            // Case-insensitive role check
+            if (user && user.role && user.role.toLowerCase() === 'admin') {
                 req.user = user;
                 next();
             } else {
-                console.warn(`Access denied for user ${user.username || user.userId}. Role: ${user.role}`);
+                const userRole = user ? user.role : 'N/A';
+                console.warn(`Admin access denied for user ${user ? (user.username || user.user_id) : 'unknown'}. Role: ${userRole}`);
                 res.status(403).json({
                     success: false,
                     message: "Truy cập bị từ chối. Bạn không có quyền admin."
