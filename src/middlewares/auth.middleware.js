@@ -15,10 +15,13 @@ const verifyToken = (req, res, next) => {
     }
 
     try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'super_secret_key');
+        const secret = process.env.JWT_SECRET || 'vibematch_secret_key_2024';
+        const decoded = jwt.verify(token, secret);
+        console.log(`JWT verified for user_id: ${decoded.user_id}, role: ${decoded.role}`);
         req.user = decoded; // Dữ liệu từ token: { user_id, role, ... }
         next();
     } catch (error) {
+        console.error("JWT Verification error in auth.middleware:", error.message);
         return res.status(403).json({
             success: false,
             message: "Mã xác thực không hợp lệ hoặc đã hết hạn!"
@@ -30,7 +33,9 @@ const verifyToken = (req, res, next) => {
  * Middleware kiểm tra quyền Admin
  */
 const isAdmin = (req, res, next) => {
-    if (!req.user || req.user.role !== 'admin') {
+    if (!req.user || !req.user.role || req.user.role.toLowerCase() !== 'admin') {
+        const roleStr = req.user ? req.user.role : 'undefined';
+        console.warn(`Admin access denied. Current role: ${roleStr}`);
         return res.status(403).json({
             success: false,
             message: "Bạn không có quyền truy cập vào khu vực này!"
