@@ -115,6 +115,13 @@ const getUserConversations = async (userId) => {
              END AS is_friend,
              cm.role AS user_role,
              (
+                SELECT COUNT(*)
+                FROM messages m 
+                WHERE m.conversation_id = c.conversation_id 
+                AND m.created_at > cm.last_read_at
+                AND m.sender_id != $1
+             ) as unread_count,
+             (
                 SELECT CASE WHEN msg_type = 'image' THEN '[Hình ảnh]' ELSE content END
                 FROM messages m 
                 WHERE m.conversation_id = c.conversation_id 
@@ -166,6 +173,33 @@ const checkMembership = async (conversationId, userId) => {
     return result.rows.length > 0;
 };
 
+// Đánh dấu đã đọc
+const markConversationAsRead = async (conversationId, userId) => {
+    const pool = getPool();
+    const query = `
+        UPDATE conversation_members SET last_read_at = NOW()
+        WHERE conversation_id = $1 AND user_id = $2
+    `;
+    await pool.query(query, [conversationId, userId]);
+};
+
+// Tổng số tin nhắn chưa đọc
+const getTotalUnreadCount = async (userId) => {
+    const pool = getPool();
+    const query = `
+        SELECT SUM(
+            (SELECT COUNT(*) FROM messages m 
+             WHERE m.conversation_id = cm.conversation_id 
+             AND m.created_at > cm.last_read_at
+             AND m.sender_id != $1)
+        ) as total_unread
+        FROM conversation_members cm
+        WHERE cm.user_id = $1 AND cm.left_at IS NULL
+    `;
+    const result = await pool.query(query, [userId]);
+    return result.rows[0].total_unread || 0;
+};
+
 // Ghi nhận Rời nhóm
 const leaveConversation = async (conversationId, userId) => {
     const pool = getPool();
@@ -202,5 +236,7 @@ module.exports = {
     checkMembership,
     leaveConversation,
     getConversationMembers,
-    getPrivateConversation
+    getPrivateConversation,
+    markConversationAsRead,
+    getTotalUnreadCount
 };
