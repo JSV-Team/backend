@@ -12,8 +12,11 @@ const isAdmin = (req, res, next) => {
             });
         }
 
-        jwt.verify(token, process.env.JWT_SECRET || 'super_secret_key_admin_vibematch', (err, user) => {
+        const secret = process.env.JWT_SECRET || 'vibematch_secret_key_2024';
+        
+        jwt.verify(token, secret, (err, user) => {
             if (err) {
+                console.error("JWT Verification failed:", err.message);
                 return res.status(403).json({
                     success: false,
                     message: "Phiên đăng nhập không hợp lệ hoặc đã hết hạn."
@@ -24,6 +27,7 @@ const isAdmin = (req, res, next) => {
                 req.user = user;
                 next();
             } else {
+                console.warn(`Access denied for user ${user.username || user.userId}. Role: ${user.role}`);
                 res.status(403).json({
                     success: false,
                     message: "Truy cập bị từ chối. Bạn không có quyền admin."
