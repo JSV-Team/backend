@@ -33,7 +33,7 @@ const handleLogin = async (req, res) => {
 
     } catch (error) {
         console.error("Lỗi tại Login Controller:", error);
-        return res.status(500).json({ success: false, message: "Lỗi server nội bộ!" });
+        return res.status(500).json({ success: false, message: "Lỗi DB/Server: " + error.message });
     }
 };
 
