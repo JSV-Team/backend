@@ -4,9 +4,11 @@ const chatController = require('../controllers/chat.controller');
 const activityModel = require('../models/activity.model');
 
 router.get('/conversations', chatController.getConversations);
+router.get('/unread-count', chatController.getUnreadCount);
 router.get('/conversations/:conversationId/messages', chatController.getMessages);
 router.get('/conversations/:conversationId/members', chatController.getMembers);
 router.patch('/conversations/:conversationId/leave', chatController.leaveGroup);
+router.patch('/conversations/:conversationId/read', chatController.markAsRead);
 router.post('/private', chatController.getOrInitPrivateChat);
 
 // Chat với host của activity - chỉ cho phép khi request đã được accepted
