@@ -248,16 +248,17 @@ const getAllActivities = async (req, res) => {
     try {
         const pool = getPool();
         const result = await pool.query(`
-            SELECT a.activity_id AS id, a.title, a.status, a.created_at,
+            SELECT a.activity_id AS id, a.title, a.description, a.status, a.created_at,
+                a.location, a.max_participants, a.duration_minutes,
                 u.full_name AS "user",
-                COUNT(r.report_id) AS reports,
-                i.name AS tag_name
+                (SELECT COUNT(report_id) FROM reports r WHERE r.reported_activity_id = a.activity_id) AS reports,
+                i.name AS tag_name,
+                img.image_url
             FROM activities a
             LEFT JOIN users u ON a.creator_id = u.user_id
             LEFT JOIN activity_tags at2 ON a.activity_id = at2.activity_id
             LEFT JOIN interests i ON at2.interest_id = i.interest_id
-            LEFT JOIN reports r ON r.reported_activity_id = a.activity_id
-            GROUP BY a.activity_id, u.full_name, i.name
+            LEFT JOIN activity_images img ON a.activity_id = img.activity_id
             ORDER BY a.created_at DESC
         `);
 
@@ -265,13 +266,33 @@ const getAllActivities = async (req, res) => {
         result.rows.forEach(row => {
             if (!row.id) return;
             if (!activityMap.has(row.id)) {
-                activityMap.set(row.id, { ...row, time: formatTimeAgo(row.created_at), tags: [] });
+                activityMap.set(row.id, { 
+                    id: row.id,
+                    title: row.title,
+                    status: row.status,
+                    created_at: row.created_at,
+                    content: row.description,
+                    location: row.location,
+                    max_participants: row.max_participants,
+                    duration_minutes: row.duration_minutes,
+                    user: row.user,
+                    reports: parseInt(row.reports) || 0,
+                    time: formatTimeAgo(row.created_at),
+                    tags: new Set(),
+                    images: new Set()
+                });
             }
-            if (row.tag_name) activityMap.get(row.id).tags.push(row.tag_name);
+            const act = activityMap.get(row.id);
+            if (row.tag_name) act.tags.add(row.tag_name);
+            if (row.image_url) act.images.add(row.image_url);
         });
 
-        const formatted = Array.from(activityMap.values());
-        formatted.forEach(act => { if (!act.tags.length) act.tags = ['Hoạt động']; });
+        const formatted = Array.from(activityMap.values()).map(act => ({
+            ...act,
+            tags: act.tags.size > 0 ? Array.from(act.tags) : ['Hoạt động'],
+            images: Array.from(act.images),
+            image_url: Array.from(act.images)[0] || null
+        }));
 
         res.json({ success: true, data: formatted });
     } catch (error) {
@@ -405,17 +426,40 @@ const getDetailedStatistics = async (req, res) => {
         let finalMatchData = matchTrendResult.rows;
 
         const interestsResult = await pool.query(`
-            SELECT i.name, COUNT(*)::int as value 
-            FROM activity_tags at2
-            JOIN interests i ON at2.interest_id = i.interest_id
-            GROUP BY i.name 
+            SELECT 
+                i.name, 
+                COUNT(ui.interest_id)::int as value 
+            FROM interests i
+            JOIN user_interests ui ON i.interest_id = ui.interest_id
+            -- "Emerging": interests added to profiles in the last 30 days
+            WHERE ui.created_at >= NOW() - INTERVAL '30 days'
+            GROUP BY i.interest_id, i.name 
             ORDER BY value DESC
             LIMIT 6
         `);
-        let interests = interestsResult.rows.length > 0 ? interestsResult.rows : [
-            { name: 'Thể thao', value: 145 }, { name: 'Du lịch', value: 98 },
-            { name: 'Âm nhạc', value: 65 }, { name: 'Nấu ăn', value: 54 }
-        ];
+
+        let interests = interestsResult.rows;
+
+        // Fallback to all-time popularity if no recent activity
+        if (interests.length === 0) {
+            const allTimeResult = await pool.query(`
+                SELECT i.name, COUNT(ui.user_id)::int as value 
+                FROM interests i
+                JOIN user_interests ui ON i.interest_id = ui.interest_id
+                GROUP BY i.interest_id, i.name 
+                ORDER BY value DESC
+                LIMIT 6
+            `);
+            interests = allTimeResult.rows;
+        }
+
+        // Mock data fallback if still empty
+        if (interests.length === 0) {
+            interests = [
+                { name: 'Âm nhạc', value: 145 }, { name: 'Du lịch', value: 98 },
+                { name: 'Bóng đá', value: 65 }, { name: 'Coding', value: 54 }
+            ];
+        }
 
         res.json({
             success: true,
@@ -536,9 +580,29 @@ const deleteBannedKeyword = async (req, res) => {
     }
 };
 
+const getUserInterestsReport = async (req, res) => {
+    try {
+        const pool = getPool();
+        const result = await pool.query(`
+            SELECT u.user_id, u.full_name, u.avatar_url, 
+                   COALESCE(json_agg(i.name) FILTER (WHERE i.name IS NOT NULL), '[]'::json) as interests
+            FROM users u
+            LEFT JOIN user_interests ui ON u.user_id = ui.user_id
+            LEFT JOIN interests i ON ui.interest_id = i.interest_id
+            GROUP BY u.user_id, u.full_name, u.avatar_url
+            ORDER BY u.full_name
+        `);
+        res.json({ success: true, data: result.rows });
+    } catch (error) {
+        console.error("GetUserInterestsReport Error:", error);
+        res.status(500).json({ success: false, message: "Lỗi server!" });
+    }
+};
+
 module.exports = {
     getAdminStats, getAllUsers, toggleUserStatus, toggleUserLock,
     getAllActivities, updateActivityStatus, getAllReports, updateReportStatus,
     getDetailedStatistics, searchAdmin, getSystemSettings, updateSystemSettings,
-    getBannedKeywords, addBannedKeyword, deleteBannedKeyword
+    getBannedKeywords, addBannedKeyword, deleteBannedKeyword,
+    getUserInterestsReport
 };

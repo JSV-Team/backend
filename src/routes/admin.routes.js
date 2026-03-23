@@ -16,6 +16,7 @@ router.put('/activities/:id/status', isAdmin, adminController.updateActivityStat
 router.get('/reports', isAdmin, adminController.getAllReports);
 router.put('/reports/:id/status', isAdmin, adminController.updateReportStatus);
 router.get('/detailed-stats', isAdmin, adminController.getDetailedStatistics);
+router.get('/user-interests-report', isAdmin, adminController.getUserInterestsReport);
 router.get('/search', isAdmin, adminController.searchAdmin);
 router.get('/settings', isAdmin, adminController.getSystemSettings);
 router.put('/settings', isAdmin, adminController.updateSystemSettings);
