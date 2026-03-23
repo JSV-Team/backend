@@ -30,7 +30,6 @@ const verifyUser = async (identifier, password) => {
         return { success: false, message: "Tài khoản hoặc mật khẩu không chính xác!" };
     }
 
-    // Tạo JWT Token
     const token = jwt.sign(
         {
             user_id: user.user_id,
@@ -38,7 +37,7 @@ const verifyUser = async (identifier, password) => {
             email: user.email,
             role: user.role
         },
-        process.env.JWT_SECRET || 'super_secret_key',
+        process.env.JWT_SECRET || 'vibematch_secret_key_2024',
         { expiresIn: '7d' }
     );
 
