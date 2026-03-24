@@ -26,6 +26,7 @@ const storage = multer.diskStorage({
 // Danh sách MIME types và extensions được phép (chuẩn app thực tế)
 const ALLOWED_IMAGE_TYPES = {
     'image/jpeg': ['.jpg', '.jpeg'],
+    'image/pjpeg': ['.jpg', '.jpeg'], // Progressive JPEG (IE/Edge)
     'image/png': ['.png'],
     'image/gif': ['.gif'],
     'image/webp': ['.webp']
@@ -37,7 +38,10 @@ const ALLOWED_MIME_TYPES = Object.keys(ALLOWED_IMAGE_TYPES);
 // File filter nghiêm ngặt
 const fileFilter = (req, file, cb) => {
     const ext = path.extname(file.originalname).toLowerCase();
-    const mimeType = file.mimetype.toLowerCase();
+    // Normalize MIME type - chuyển image/pjpeg thành image/jpeg
+    let mimeType = file.mimetype.toLowerCase();
+    if (mimeType === 'image/pjpeg') mimeType = 'image/jpeg';
+    if (mimeType === 'image/jpg') mimeType = 'image/jpeg';
     
     // Kiểm tra MIME type
     if (!ALLOWED_MIME_TYPES.includes(mimeType)) {
