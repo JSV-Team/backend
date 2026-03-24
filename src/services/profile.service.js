@@ -4,9 +4,17 @@ const { getPool } = require("../config/db");
 exports.getProfile = async (userId) => {
   const pool = await getPool();
   const r = await pool.query(`
-      SELECT user_id, username, full_name, email, avatar_url, bio, location,
-             reputation_score, gender, dob, created_at
-      FROM users WHERE user_id=$1
+      SELECT 
+        u.user_id, u.username, u.full_name, u.email, u.avatar_url, u.bio, u.location,
+        u.reputation_score, u.gender, u.dob, u.created_at,
+        (SELECT COUNT(*)::INT FROM follows WHERE following_id = u.user_id) as followers_count,
+        (SELECT COUNT(*)::INT FROM follows WHERE follower_id = u.user_id) as following_count,
+        (SELECT COUNT(*)::INT FROM conversation_members cm 
+         JOIN conversations c ON c.conversation_id = cm.conversation_id
+         WHERE cm.user_id = u.user_id AND c.conversation_type != 'direct'
+        ) as groups_count
+      FROM users u 
+      WHERE u.user_id=$1
     `, [userId]);
 
   if (!r.rows[0]) throw Object.assign(new Error("User not found"), { status: 404 });
