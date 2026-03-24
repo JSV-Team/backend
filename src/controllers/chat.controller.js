@@ -1,5 +1,6 @@
 const asyncHandler = require('express-async-handler');
 const chatService = require('../services/chat.service');
+const chatModel = require('../models/chat.model');
 
 const getConversations = asyncHandler(async (req, res) => {
     const userId = req.user.user_id;
@@ -27,6 +28,17 @@ const leaveGroup = asyncHandler(async (req, res) => {
 
 const getMembers = asyncHandler(async (req, res) => {
     const { conversationId } = req.params;
+    const userId = req.user.user_id;
+
+    // Verify caller is a member of this conversation
+    const isMember = await chatModel.checkMembership(conversationId, userId);
+    if (!isMember) {
+        return res.status(403).json({
+            success: false,
+            message: 'Bạn không thuộc nhóm chat này'
+        });
+    }
+
     const members = await chatService.getConversationMembers(conversationId);
     res.json(members);
 });

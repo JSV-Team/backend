@@ -163,6 +163,25 @@ exports.createStatus = async (userId, payload) => {
  */
 exports.deletePost = async (postId, userId) => {
   const pool = getPool();
+
+  // Check post exists and verify ownership
+  const check = await pool.query(
+    'SELECT creator_id FROM activities WHERE activity_id = $1',
+    [postId]
+  );
+
+  if (check.rows.length === 0) {
+    const err = new Error('Không tìm thấy bài viết');
+    err.status = 404;
+    throw err;
+  }
+
+  if (check.rows[0].creator_id !== userId) {
+    const err = new Error('Bạn không có quyền xóa bài viết này');
+    err.status = 403;
+    throw err;
+  }
+
   await pool.query(
     "UPDATE activities SET status = 'deleted' WHERE activity_id = $1 AND creator_id = $2",
     [postId, userId]

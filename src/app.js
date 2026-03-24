@@ -10,9 +10,17 @@ const app = express();
 // Middleware
 app.use(compression());
 app.use(cors({
-  origin: process.env.CLIENT_URL || '*', 
+  origin: (origin, callback) => {
+    const allowed = (process.env.CLIENT_URL || '').split(',').map(o => o.trim()).filter(Boolean);
+    // Allow requests with no origin (e.g. server-to-server, Postman in dev)
+    if (!origin || allowed.includes(origin) || process.env.NODE_ENV === 'development') {
+      return callback(null, true);
+    }
+    return callback(new Error(`CORS: Origin '${origin}' not allowed`));
+  },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'x-auth-user-id']
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-auth-user-id'],
+  credentials: true
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));

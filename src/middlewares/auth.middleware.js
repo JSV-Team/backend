@@ -15,7 +15,11 @@ const verifyToken = (req, res, next) => {
     }
 
     try {
-        const secret = process.env.JWT_SECRET || 'vibematch_secret_key_2024';
+        const secret = process.env.JWT_SECRET;
+        if (!secret) {
+            console.error('FATAL: JWT_SECRET environment variable is not set!');
+            return res.status(500).json({ success: false, message: 'Lỗi cấu hình server!' });
+        }
         const decoded = jwt.verify(token, secret);
         console.log(`JWT verified for user_id: ${decoded.user_id}, role: ${decoded.role}`);
         req.user = decoded; // Dữ liệu từ token: { user_id, role, ... }

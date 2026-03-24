@@ -15,29 +15,32 @@ const setupSocket = (server) => {
         }
     });
 
-    // Middleware check connection
+    // Middleware check connection — verify JWT, do NOT trust client-sent userId
     io.use((socket, next) => {
-        const userId = socket.handshake.auth.userId;
         const token = socket.handshake.auth.token;
-        
-        console.log('🔐 Socket auth middleware - userId:', userId, 'token:', token ? 'present' : 'missing');
-        console.log('   Full auth object:', socket.handshake.auth);
-        
-        if (!userId) {
-            console.log('❌ Auth failed: Missing userId');
-            return next(new Error("Authentication error: Missing userId"));
-        }
-        
+
+        console.log('🔐 Socket auth middleware - token:', token ? 'present' : 'missing');
+
         if (!token) {
             console.log('❌ Auth failed: Missing token');
-            return next(new Error("Authentication error: Missing token"));
+            return next(new Error('Authentication error: Missing token'));
         }
-        
-        // TODO: Verify JWT token here in production
-        // For now, just accept the userId
-        socket.userId = parseInt(userId);
-        console.log('✅ Socket authenticated for user:', socket.userId);
-        next();
+
+        const secret = process.env.JWT_SECRET;
+        if (!secret) {
+            return next(new Error('Server configuration error: JWT_SECRET not set'));
+        }
+
+        try {
+            const decoded = jwt.verify(token, secret);
+            // Use user_id from token — never from client-provided auth.userId
+            socket.userId = decoded.user_id;
+            console.log('✅ Socket authenticated for user:', socket.userId);
+            next();
+        } catch (err) {
+            console.log('❌ Auth failed: Invalid token -', err.message);
+            return next(new Error('Authentication error: Invalid or expired token'));
+        }
     });
 
     io.on('connection', (socket) => {

@@ -61,13 +61,14 @@ const getPublicProfile = async (req, res) => {
                 gender: profile.gender,
                 reputation_score: profile.reputation_score,
                 created_at: profile.created_at,
+                // email và dob bị loại bỏ — không hiển thị cho public
                 interests,
                 stats: {
                     followers_count: stats.followers_count,
                     following_count: stats.following_count,
                     mutual_count: mutualFollowers.length
                 },
-                mutual_followers: mutualFollowers.slice(0, 3), // Return a sample
+                mutual_followers: mutualFollowers.slice(0, 3),
                 has_story: hasStory,
                 is_following: isFollowing
             }

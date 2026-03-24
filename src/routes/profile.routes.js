@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const profileController = require('../controllers/profile.controller');
-const { verifyToken, isOwner } = require('../middlewares/auth.middleware');
+const { verifyToken, isOwner, isAdmin } = require('../middlewares/auth.middleware');
 
 // @route   PUT /api/profile/password
 // @desc    Đổi mật khẩu
@@ -43,11 +43,11 @@ router.post('/:userId/follow', verifyToken, profileController.followUser);
 // @access  Private
 router.delete('/:userId/unfollow', verifyToken, profileController.unfollowUser);
 
-// NEW: Quản trị viên cập nhật profile người dùng
+// Admin Only: cập nhật profile bất kỳ user
 // @route   PUT /api/profile/admin/:userId
 // @desc    Admin cập nhật profile user bất kỳ
 // @access  Admin Only
-router.put('/admin/:userId', verifyToken, isOwner('userId'), profileController.updateProfileById);
+router.put('/admin/:userId', verifyToken, isAdmin, profileController.updateProfileById);
 
 module.exports = router;
 

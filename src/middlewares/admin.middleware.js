@@ -12,8 +12,11 @@ const isAdmin = (req, res, next) => {
             });
         }
 
-        const envSecret = process.env.JWT_SECRET;
-        const secret = envSecret ? envSecret.trim() : 'vibematch_secret_key_2024';
+        const secret = process.env.JWT_SECRET ? process.env.JWT_SECRET.trim() : null;
+        if (!secret) {
+            console.error('FATAL: JWT_SECRET environment variable is not set!');
+            return res.status(500).json({ success: false, message: 'Lỗi cấu hình server!' });
+        }
         
         jwt.verify(token, secret, (err, user) => {
             if (err) {
