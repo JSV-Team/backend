@@ -34,13 +34,19 @@ app.use(helmet({
 
 // Middleware
 app.use(compression());
-app.use(cors({
-  origin: '*', // Allow all origins temporarily
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'x-auth-user-id', 'x-requested-with'],
-  credentials: false, // Set to false when origin is '*'
-  optionsSuccessStatus: 200
-}));
+// CORS - Simple configuration that works
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-auth-user-id, x-requested-with');
+  
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+  
+  next();
+});
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -60,15 +66,6 @@ app.use((req, res, next) => {
 
 // Routes
 app.use('/api', routes);
-
-// Explicit OPTIONS handler for all API routes
-app.options('/api/*', (req, res) => {
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-auth-user-id, x-requested-with');
-  res.header('Access-Control-Allow-Credentials', 'true');
-  res.sendStatus(200);
-});
 
 // 404 Handler for API
 app.use('/api', (req, res) => {
