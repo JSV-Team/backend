@@ -40,24 +40,38 @@ const fileFilter = (req, file, cb) => {
     const ext = path.extname(file.originalname).toLowerCase();
     // Normalize MIME type - chuyển image/pjpeg thành image/jpeg
     let mimeType = file.mimetype.toLowerCase();
-    if (mimeType === 'image/pjpeg') mimeType = 'image/jpeg';
-    if (mimeType === 'image/jpg') mimeType = 'image/jpeg';
+    
+    console.log(`📁 File upload attempt: ${file.originalname}`);
+    console.log(`   Original MIME: ${file.mimetype}, Ext: ${ext}`);
+    
+    if (mimeType === 'image/pjpeg' || mimeType === 'image/jpg') {
+        console.log(`   Normalizing MIME type from ${mimeType} to image/jpeg`);
+        mimeType = 'image/jpeg';
+    }
     
     // Kiểm tra MIME type
     if (!ALLOWED_MIME_TYPES.includes(mimeType)) {
-        return cb(new Error(`Định dạng file không được hỗ trợ. Chỉ chấp nhận: ${ALLOWED_EXTENSIONS.join(', ')}`), false);
+        const err = `Định dạng file không được hỗ trợ. MIME: ${mimeType}. Chỉ chấp nhận: ${ALLOWED_EXTENSIONS.join(', ')}`;
+        console.log(`   ❌ ${err}`);
+        return cb(new Error(err), false);
     }
     
     // Kiểm tra extension
     if (!ALLOWED_EXTENSIONS.includes(ext)) {
-        return cb(new Error(`Phần mở rộng file không hợp lệ. Chỉ chấp nhận: ${ALLOWED_EXTENSIONS.join(', ')}`), false);
+        const err = `Phần mở rộng file không hợp lệ: ${ext}. Chỉ chấp nhận: ${ALLOWED_EXTENSIONS.join(', ')}`;
+        console.log(`   ❌ ${err}`);
+        return cb(new Error(err), false);
     }
     
-    // Kiểm tra sự khớp giữa MIME type và extension
-    if (!ALLOWED_IMAGE_TYPES[mimeType].includes(ext)) {
-        return cb(new Error('MIME type và phần mở rộng file không khớp'), false);
+    // Kiểm tra sự khớp giữa MIME type và extension (dùng mimeType đã normalize)
+    const allowedExts = ALLOWED_IMAGE_TYPES[mimeType];
+    if (!allowedExts || !allowedExts.includes(ext)) {
+        const err = `MIME type (${mimeType}) và phần mở rộng file (${ext}) không khớp`;
+        console.log(`   ❌ ${err}`);
+        return cb(new Error(err), false);
     }
     
+    console.log(`   ✅ File passed validation`);
     cb(null, true);
 };
 
