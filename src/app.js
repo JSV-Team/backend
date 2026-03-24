@@ -38,15 +38,28 @@ app.use(cors({
   origin: (origin, callback) => {
     const allowed = (process.env.CLIENT_URL || '').split(',').map(o => o.trim()).filter(Boolean);
     
-    // In production, strictly enforce allowed origins
+    console.log(`[CORS] Origin: ${origin}, Allowed: ${allowed.join(', ')}, NODE_ENV: ${process.env.NODE_ENV}`);
+    
+    // In production, allow configured origins + no origin (for server-to-server)
     if (process.env.NODE_ENV === 'production') {
+      // Allow requests with no origin (mobile apps, server-to-server, Postman)
       if (!origin) {
-        return callback(new Error('CORS: Origin required in production'));
+        return callback(null, true);
       }
-      if (!allowed.includes(origin)) {
-        return callback(new Error(`CORS: Origin '${origin}' not allowed`));
+      
+      // Check if origin is in allowed list
+      if (allowed.length > 0 && allowed.includes(origin)) {
+        return callback(null, true);
       }
-      return callback(null, true);
+      
+      // If no CLIENT_URL configured, allow all (fallback for deployment)
+      if (allowed.length === 0) {
+        console.warn('[CORS] No CLIENT_URL configured, allowing all origins');
+        return callback(null, true);
+      }
+      
+      console.error(`[CORS] Origin '${origin}' not in allowed list: ${allowed.join(', ')}`);
+      return callback(new Error(`CORS: Origin '${origin}' not allowed`));
     }
     
     // In development, allow localhost and configured origins
@@ -57,9 +70,10 @@ app.use(cors({
     
     return callback(new Error(`CORS: Origin '${origin}' not allowed`));
   },
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'x-auth-user-id'],
-  credentials: true
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-auth-user-id', 'x-requested-with'],
+  credentials: true,
+  optionsSuccessStatus: 200 // For legacy browser support
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));

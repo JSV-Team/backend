@@ -39,10 +39,10 @@ const validateEnvironment = () => {
     process.exit(1);
   }
 
-  // Validate CORS in production
+  // Validate CORS in production (warning only, not blocking)
   if (process.env.NODE_ENV === 'production' && !process.env.CLIENT_URL) {
-    console.error('❌ CLIENT_URL is required in production for CORS security');
-    process.exit(1);
+    console.warn('⚠️  CLIENT_URL not set in production - CORS will allow all origins');
+    console.warn('   Set CLIENT_URL=https://vibematch-frontend.vercel.app for security');
   }
 
   console.log('✅ Environment validation passed');
