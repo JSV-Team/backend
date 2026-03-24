@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
 const routes = require('./routes');
 const path = require('path');
 
@@ -7,15 +8,53 @@ const compression = require('compression');
 
 const app = express();
 
+// Security headers
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      scriptSrc: ["'self'"],
+      imgSrc: ["'self'", "data:", "https:"],
+      connectSrc: ["'self'"],
+      fontSrc: ["'self'"],
+      objectSrc: ["'none'"],
+      mediaSrc: ["'self'"],
+      frameSrc: ["'none'"],
+    },
+  },
+  crossOriginEmbedderPolicy: false
+}));
+
+// Rate limiting
+const { generalLimiter, authLimiter, registerLimiter } = require('./middlewares/rateLimiter');
+app.use('/api', generalLimiter);
+app.use('/api/login', authLimiter);
+app.use('/api/auth/register', registerLimiter);
+
 // Middleware
 app.use(compression());
 app.use(cors({
   origin: (origin, callback) => {
     const allowed = (process.env.CLIENT_URL || '').split(',').map(o => o.trim()).filter(Boolean);
-    // Allow requests with no origin (e.g. server-to-server, Postman in dev)
-    if (!origin || allowed.includes(origin) || process.env.NODE_ENV === 'development') {
+    
+    // In production, strictly enforce allowed origins
+    if (process.env.NODE_ENV === 'production') {
+      if (!origin) {
+        return callback(new Error('CORS: Origin required in production'));
+      }
+      if (!allowed.includes(origin)) {
+        return callback(new Error(`CORS: Origin '${origin}' not allowed`));
+      }
       return callback(null, true);
     }
+    
+    // In development, allow localhost and configured origins
+    if (!origin || allowed.includes(origin) || 
+        (origin && (origin.includes('localhost') || origin.includes('127.0.0.1')))) {
+      return callback(null, true);
+    }
+    
     return callback(new Error(`CORS: Origin '${origin}' not allowed`));
   },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],

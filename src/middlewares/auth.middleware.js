@@ -21,7 +21,10 @@ const verifyToken = (req, res, next) => {
             return res.status(500).json({ success: false, message: 'Lỗi cấu hình server!' });
         }
         const decoded = jwt.verify(token, secret);
-        console.log(`JWT verified for user_id: ${decoded.user_id}, role: ${decoded.role}`);
+        // Only log in development
+        if (process.env.NODE_ENV !== 'production') {
+            console.log(`JWT verified for user_id: ${decoded.user_id}, role: ${decoded.role}`);
+        }
         req.user = decoded; // Dữ liệu từ token: { user_id, role, ... }
         next();
     } catch (error) {

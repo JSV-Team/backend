@@ -2,8 +2,8 @@ const { Pool } = require("pg");
 require("dotenv").config();
 
 console.log("[DEBUG DB CONFIG]");
-console.log("DB_USER provided:", process.env.DB_USER ? `Yes (${process.env.DB_USER})` : "No");
-console.log("DB_HOST provided:", process.env.DB_HOST ? `Yes (${process.env.DB_HOST})` : "No");
+console.log("DB_USER provided:", process.env.DB_USER ? "Yes" : "No");
+console.log("DB_HOST provided:", process.env.DB_HOST ? "Yes" : "No");
 console.log("DATABASE_URL provided:", process.env.DATABASE_URL ? "Yes" : "No");
 
 const isLocal = !process.env.DB_HOST || process.env.DB_HOST.includes("localhost");

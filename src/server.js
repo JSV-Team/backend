@@ -2,9 +2,13 @@ const http = require('http'); // reload 1
 
 const app = require('./app');
 const { connectDB } = require('./config/db');
+const { validateEnvironment } = require('./config/validateEnv');
 const setupSocket = require('./socket');
 const { startMatchingEngine } = require('./services/matchingEngineLoop');
 require('dotenv').config();
+
+// Validate environment variables before starting
+validateEnvironment();
 
 const PORT = process.env.PORT || 3001;
 

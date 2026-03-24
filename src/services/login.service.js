@@ -30,6 +30,13 @@ const verifyUser = async (identifier, password) => {
         return { success: false, message: "Tài khoản hoặc mật khẩu không chính xác!" };
     }
 
+    // Validate JWT_SECRET exists
+    const jwtSecret = process.env.JWT_SECRET;
+    if (!jwtSecret) {
+        console.error('FATAL: JWT_SECRET environment variable is required!');
+        return { success: false, message: "Lỗi cấu hình server - JWT_SECRET missing!" };
+    }
+
     const token = jwt.sign(
         {
             user_id: user.user_id,
@@ -37,7 +44,7 @@ const verifyUser = async (identifier, password) => {
             email: user.email,
             role: user.role
         },
-        process.env.JWT_SECRET || 'vibematch_secret_key_2024',
+        jwtSecret,
         { expiresIn: '7d' }
     );
 
