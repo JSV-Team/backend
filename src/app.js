@@ -47,6 +47,14 @@ app.use((req, res, next) => {
   
   next();
 });
+
+// Additional CORS headers for file uploads
+app.use('/api/upload', (req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-auth-user-id, x-requested-with');
+  next();
+});
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
