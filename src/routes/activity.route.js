@@ -19,11 +19,10 @@ router.get('/pending-activities', verifyToken, activityController.getPendingActi
 router.delete('/pending-activities/:id', verifyToken, activityController.deleteActivityRequest);
 
 // =============================================
-// GET /api/pending-approvals (Protected)
+// GET /api/activities/pending-approvals (Protected)
 // =============================================
 router.get('/pending-approvals', verifyToken, activityController.getPendingApprovals);
 
-// =============================================
 // PATCH /api/activities/pending-activities/:id/approve (Protected)
 // =============================================
 router.patch('/pending-activities/:id/approve', verifyToken, activityController.approveActivityRequest);
