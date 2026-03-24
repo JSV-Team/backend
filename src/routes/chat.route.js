@@ -2,6 +2,10 @@ const express = require('express');
 const router = express.Router();
 const chatController = require('../controllers/chat.controller');
 const activityModel = require('../models/activity.model');
+const { verifyToken } = require('../middlewares/auth.middleware');
+
+// All chat routes require authentication
+router.use(verifyToken);
 
 router.get('/conversations', chatController.getConversations);
 router.get('/unread-count', chatController.getUnreadCount);
@@ -13,11 +17,12 @@ router.post('/private', chatController.getOrInitPrivateChat);
 
 // Chat với host của activity - chỉ cho phép khi request đã được accepted
 router.post('/activity-host', async (req, res) => {
-    const { activityId, userId } = req.body;
+    const { activityId } = req.body;
+    const userId = req.user.user_id;
     
-    if (!activityId || !userId) {
+    if (!activityId) {
         return res.status(400).json({ 
-            message: "Thiếu activityId hoặc userId",
+            message: "Thiếu activityId",
             errorCode: "MISSING_PARAMS"
         });
     }

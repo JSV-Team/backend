@@ -1,24 +1,22 @@
 const router = require("express").Router();
 const c = require("../controllers/posts.controller");
+const { verifyToken } = require("../middlewares/auth.middleware");
 
+// Public - Read operations
 router.get("/:userId", c.listByUser);
-router.post("/:userId", c.createPost);
-router.delete("/:postId", c.deletePost);
-router.post("/status/:userId", c.createStatus);
-router.delete("/status/:statusId", c.deleteStatus);
-
-
-
 router.get("/detail/:postId", c.detail);
-
-router.post("/react/:postId", c.react);
 router.get("/reactors/:postId", c.reactors);
-
-router.post("/comment/:postId", c.comment);
 router.get("/comments/:postId", c.comments);
 router.get("/commenters/:postId", c.commenters);
-
-router.post("/share/:postId", c.share);
 router.get("/sharers/:postId", c.sharers);
+
+// Protected - Write operations (require JWT)
+router.post("/", verifyToken, c.createPost);
+router.delete("/:postId", verifyToken, c.deletePost);
+router.post("/status", verifyToken, c.createStatus);
+router.delete("/status/:statusId", verifyToken, c.deleteStatus);
+router.post("/react/:postId", verifyToken, c.react);
+router.post("/comment/:postId", verifyToken, c.comment);
+router.post("/share/:postId", verifyToken, c.share);
 
 module.exports = router;

@@ -3,6 +3,10 @@ const router = express.Router();
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
+const { verifyToken } = require('../middlewares/auth.middleware');
+
+// All upload routes require authentication
+router.use(verifyToken);
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {

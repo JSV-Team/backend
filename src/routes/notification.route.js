@@ -1,8 +1,12 @@
 const express = require('express');
 const router = express.Router();
 const notificationController = require('../controllers/notification.controller');
+const { verifyToken } = require('../middlewares/auth.middleware');
 
-// Get all notifications for a user
+// All notification routes require authentication
+router.use(verifyToken);
+
+// Get all notifications for the authenticated user
 router.get('/', notificationController.getNotifications);
 
 // Get unread notifications count

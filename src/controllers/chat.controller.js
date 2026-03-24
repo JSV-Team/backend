@@ -2,15 +2,14 @@ const asyncHandler = require('express-async-handler');
 const chatService = require('../services/chat.service');
 
 const getConversations = asyncHandler(async (req, res) => {
-    // Demo mặc định là 2 nếu FE không truyền để test
-    const userId = req.query.userId || 2;
+    const userId = req.user.user_id;
     const result = await chatService.getUserConversations(userId);
     res.json(result);
 });
 
 const getMessages = asyncHandler(async (req, res) => {
     const { conversationId } = req.params;
-    const userId = req.query.userId || 2;
+    const userId = req.user.user_id;
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 20;
 
@@ -20,7 +19,7 @@ const getMessages = asyncHandler(async (req, res) => {
 
 const leaveGroup = asyncHandler(async (req, res) => {
     const { conversationId } = req.params;
-    const userId = req.body.userId || 2;
+    const userId = req.user.user_id;
 
     await chatService.leaveConversation(conversationId, userId);
     res.json({ message: "Đã rời nhóm thành công!" });
@@ -34,7 +33,7 @@ const getMembers = asyncHandler(async (req, res) => {
 
 const getOrInitPrivateChat = asyncHandler(async (req, res) => {
     const { partnerId, activityId } = req.body;
-    const userId = req.body.userId || 2; // CURRENT_USER_ID, nên lấy từ token
+    const userId = req.user.user_id;
 
     if (!partnerId) {
         return res.status(400).json({ message: "Thiếu partnerId" });
@@ -60,7 +59,7 @@ const getOrInitPrivateChat = asyncHandler(async (req, res) => {
 // Kiểm tra user có thể nhắn tin cho host của activity không
 const checkCanMessageHost = asyncHandler(async (req, res) => {
     const { activityId } = req.body;
-    const userId = req.body.userId || 2;
+    const userId = req.user.user_id;
 
     if (!activityId) {
         return res.status(400).json({ message: "Thiếu activityId" });
@@ -76,13 +75,13 @@ const checkCanMessageHost = asyncHandler(async (req, res) => {
 
 const markAsRead = asyncHandler(async (req, res) => {
     const { conversationId } = req.params;
-    const userId = req.body.userId || req.query.userId || 2;
+    const userId = req.user.user_id;
     await chatService.markConversationAsRead(conversationId, userId);
     res.json({ message: "OK" });
 });
 
 const getUnreadCount = asyncHandler(async (req, res) => {
-    const userId = req.query.userId || 2;
+    const userId = req.user.user_id;
     const result = await chatService.getTotalUnreadCount(userId);
     res.json({ unread_count: result });
 });

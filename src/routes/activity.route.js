@@ -4,34 +4,34 @@ const activityController = require('../controllers/activity.controller');
 const { verifyToken } = require('../middlewares/auth.middleware');
 
 // =============================================
-// GET /api/activities/pending-activities?userId=X
-// =============================================
-router.get('/pending-activities', activityController.getPendingActivities);
-
-// =============================================
-// DELETE /api/activities/pending-activities/:id
-// =============================================
-router.delete('/pending-activities/:id', activityController.deleteActivityRequest);
-
-// =============================================
-// GET /api/pending-approvals?userId=X
-// =============================================
-router.get('/pending-approvals', activityController.getPendingApprovals);
-
-// =============================================
-// PATCH /api/pending-activities/:id/approve
-// PATCH /api/activities/pending-activities/:id/approve
-// =============================================
-router.patch('/pending-activities/:id/approve', activityController.approveActivityRequest);
-
-// =============================================
-// PATCH /api/activities/pending-activities/:id/reject
-// =============================================
-router.patch('/pending-activities/:id/reject', activityController.rejectActivityRequest);
-// =============================================
-// GET /api/activities
+// GET /api/activities (Public - list all activities)
 // =============================================
 router.get('/', activityController.getActivities);
+
+// =============================================
+// GET /api/activities/pending-activities (Protected)
+// =============================================
+router.get('/pending-activities', verifyToken, activityController.getPendingActivities);
+
+// =============================================
+// DELETE /api/activities/pending-activities/:id (Protected)
+// =============================================
+router.delete('/pending-activities/:id', verifyToken, activityController.deleteActivityRequest);
+
+// =============================================
+// GET /api/pending-approvals (Protected)
+// =============================================
+router.get('/pending-approvals', verifyToken, activityController.getPendingApprovals);
+
+// =============================================
+// PATCH /api/activities/pending-activities/:id/approve (Protected)
+// =============================================
+router.patch('/pending-activities/:id/approve', verifyToken, activityController.approveActivityRequest);
+
+// =============================================
+// PATCH /api/activities/pending-activities/:id/reject (Protected)
+// =============================================
+router.patch('/pending-activities/:id/reject', verifyToken, activityController.rejectActivityRequest);
 
 // =============================================
 // POST /api/activities/join (Protected)
@@ -39,11 +39,10 @@ router.get('/', activityController.getActivities);
 router.post('/join', verifyToken, activityController.joinActivity);
 
 // =============================================
-// DELETE /api/activities/:id
+// DELETE /api/activities/:id (Protected)
 // =============================================
-router.delete('/:id', activityController.deleteActivity);
+router.delete('/:id', verifyToken, activityController.deleteActivity);
 
 router.get('/test-route', (req, res) => res.json({ message: 'Route is active' }));
 
 module.exports = router;
-

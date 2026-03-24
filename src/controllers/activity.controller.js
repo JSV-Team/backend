@@ -3,7 +3,7 @@ const activityService = require('../services/activity.service');
 
 const getPendingActivities = asyncHandler(async (req, res) => {
     try {
-        const userId = parseInt(req.query.userId) || 2;
+        const userId = req.user.user_id;
         const result = await activityService.getPendingActivities(userId);
         res.json(result);
     } catch (error) {
@@ -14,8 +14,7 @@ const getPendingActivities = asyncHandler(async (req, res) => {
 
 const getPendingApprovals = asyncHandler(async (req, res) => {
     try {
-        const userId = parseInt(req.query.userId);
-        if (!userId) return res.status(400).json({ message: 'Thiếu userId' });
+        const userId = req.user.user_id;
         const result = await activityService.getPendingApprovals(userId);
         res.json(result);
     } catch (error) {
@@ -49,8 +48,7 @@ const getActivities = asyncHandler(async (req, res) => {
 
 const joinActivity = asyncHandler(async (req, res) => {
     const activityId = req.body.activityId || req.body.activity_id;
-    // Tìm userId từ mọi nguồn có thể (Token hoặc Body) để tránh lỗi thiếu dữ liệu
-    const userId = req.user?.user_id || req.user?.id || req.body.userId || req.body.user_id;
+    const userId = req.user.user_id;
     
     console.log(`[JOIN DEBUG] activityId: ${activityId}, userId: ${userId}`);
     
@@ -93,18 +91,14 @@ const rejectActivityRequest = asyncHandler(async (req, res) => {
         res.status(500).json({ message: error.message || 'Lỗi Server' });
     }
 });
+
 const deleteActivity = asyncHandler(async (req, res) => {
     const activityId = parseInt(req.params.id);
-    const userId = req.body.userId || parseInt(req.query.userId);
+    const userId = req.user.user_id;
 
     console.log(`[DEBUG] Attempting to delete activity: ID=${activityId}, UserID=${userId}`);
 
     try {
-        if (!userId) {
-            console.log('[DEBUG] No userId provided in request');
-            return res.status(401).json({ message: 'Không xác định được user' });
-        }
-
         const result = await activityService.deleteActivity(activityId, userId);
         console.log('[DEBUG] Deletion successful for ID:', activityId);
         res.json({ message: 'Xóa bài viết thành công' });
@@ -120,9 +114,11 @@ const deleteActivity = asyncHandler(async (req, res) => {
 const createActivity = asyncHandler(async (req, res) => {
     try {
         const activityData = req.body;
-        // Kiểm tra cơ bản
-        if (!activityData.user_id || !activityData.title) {
-            return res.status(400).json({ message: 'Thiếu thông tin user_id hoặc title' });
+        // Gán user_id từ JWT token thay vì từ body
+        activityData.user_id = req.user.user_id;
+
+        if (!activityData.title) {
+            return res.status(400).json({ message: 'Thiếu thông tin title' });
         }
         
         const newActivityId = await activityService.createActivity(activityData);
@@ -139,8 +135,8 @@ module.exports = {
     getActivities,
     joinActivity,
     approveActivityRequest,
-    getPendingApprovals,
     rejectActivityRequest,
+    getPendingApprovals,
     deleteActivity,
     createActivity
 };

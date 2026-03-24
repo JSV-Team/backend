@@ -11,7 +11,7 @@ exports.listByUser = async (req, res, next) => {
 
 exports.createPost = async (req, res, next) => {
   try {
-    const userId = Number(req.params.userId || req.body.userId);
+    const userId = req.user.user_id;
     console.log(`[posts.controller] createPost - userId: ${userId}, body keys: ${Object.keys(req.body)}`);
     res.json(await s.createPost(userId, req.body));
   } catch (e) { 
@@ -30,8 +30,9 @@ exports.detail = async (req, res, next) => {
 exports.react = async (req, res, next) => {
   try {
     const postId = Number(req.params.postId);
-    const { user_id, emoji } = req.body;
-    res.json(await s.react(postId, Number(user_id), String(emoji || "")));
+    const userId = req.user.user_id;
+    const { emoji } = req.body;
+    res.json(await s.react(postId, userId, String(emoji || "")));
   } catch (e) { next(e); }
 };
 
@@ -44,8 +45,9 @@ exports.reactors = async (req, res, next) => {
 exports.comment = async (req, res, next) => {
   try {
     const postId = Number(req.params.postId);
-    const { user_id, content } = req.body;
-    res.json(await s.comment(postId, Number(user_id), String(content || "")));
+    const userId = req.user.user_id;
+    const { content } = req.body;
+    res.json(await s.comment(postId, userId, String(content || "")));
   } catch (e) { next(e); }
 };
 
@@ -64,8 +66,8 @@ exports.commenters = async (req, res, next) => {
 exports.share = async (req, res, next) => {
   try {
     const postId = Number(req.params.postId);
-    const { user_id } = req.body;
-    res.json(await s.share(postId, Number(user_id)));
+    const userId = req.user.user_id;
+    res.json(await s.share(postId, userId));
   } catch (e) { next(e); }
 };
 
@@ -77,7 +79,7 @@ exports.sharers = async (req, res, next) => {
 
 exports.createStatus = async (req, res, next) => {
   try {
-    const userId = Number(req.params.userId || req.body.userId);
+    const userId = req.user.user_id;
     res.json(await s.createStatus(userId, req.body));
   } catch (e) { next(e); }
 };
@@ -85,7 +87,7 @@ exports.createStatus = async (req, res, next) => {
 exports.deletePost = exports.deleteActivity = async (req, res, next) => {
   try {
     const { postId } = req.params;
-    const userId = Number(req.query.userId || req.body.userId);
+    const userId = req.user.user_id;
     res.json(await s.deletePost(postId, userId));
   } catch (e) { next(e); }
 };
@@ -93,9 +95,7 @@ exports.deletePost = exports.deleteActivity = async (req, res, next) => {
 exports.deleteStatus = async (req, res, next) => {
   try {
     const { statusId } = req.params;
-    const userId = Number(req.query.userId || req.body.userId);
+    const userId = req.user.user_id;
     res.json(await s.deleteStatus(statusId, userId));
   } catch (e) { next(e); }
 };
-
-
