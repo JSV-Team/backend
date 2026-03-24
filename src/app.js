@@ -16,7 +16,7 @@ app.use(helmet({
       styleSrc: ["'self'", "'unsafe-inline'"],
       scriptSrc: ["'self'"],
       imgSrc: ["'self'", "data:", "https:"],
-      connectSrc: ["'self'", "https:"], // Allow HTTPS connections for API calls
+      connectSrc: ["'self'", "https:"],
       fontSrc: ["'self'"],
       objectSrc: ["'none'"],
       mediaSrc: ["'self'"],
@@ -25,6 +25,12 @@ app.use(helmet({
   },
   crossOriginEmbedderPolicy: false
 }));
+
+// Disable CSP for uploads to allow cross-origin image loading
+app.use('/uploads', (req, res, next) => {
+  res.removeHeader('Content-Security-Policy');
+  next();
+});
 
 // Rate limiting - TEMPORARILY DISABLED FOR DEBUGGING
 // const { generalLimiter, authLimiter, registerLimiter } = require('./middlewares/rateLimiter');
@@ -60,16 +66,23 @@ app.use(express.urlencoded({ extended: true }));
 
 // Serve file upload tĩnh với CORS headers
 app.use('/uploads', (req, res, next) => {
+  // CORS headers for cross-origin image loading
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Range');
+  res.header('Cross-Origin-Resource-Policy', 'cross-origin');
   
   if (req.method === 'OPTIONS') {
     return res.sendStatus(200);
   }
   
   next();
-}, express.static(path.join(__dirname, '../uploads')));
+}, express.static(path.join(__dirname, '../uploads'), {
+  setHeaders: (res, path) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Cross-Origin-Resource-Policy', 'cross-origin');
+  }
+}));
 
 // Debug middleware - Log to console in development
 app.use((req, res, next) => {
