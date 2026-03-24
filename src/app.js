@@ -26,54 +26,21 @@ app.use(helmet({
   crossOriginEmbedderPolicy: false
 }));
 
-// Rate limiting
-const { generalLimiter, authLimiter, registerLimiter } = require('./middlewares/rateLimiter');
-app.use('/api', generalLimiter);
-app.use('/api/login', authLimiter);
-app.use('/api/auth/register', registerLimiter);
+// Rate limiting - TEMPORARILY DISABLED FOR DEBUGGING
+// const { generalLimiter, authLimiter, registerLimiter } = require('./middlewares/rateLimiter');
+// app.use('/api', generalLimiter);
+// app.use('/api/login', authLimiter);
+// app.use('/api/auth/register', registerLimiter);
 
 // Middleware
 app.use(compression());
 app.use(cors({
-  origin: (origin, callback) => {
-    const allowed = (process.env.CLIENT_URL || '').split(',').map(o => o.trim()).filter(Boolean);
-    
-    console.log(`[CORS] Origin: ${origin}, Allowed: ${allowed.join(', ')}, NODE_ENV: ${process.env.NODE_ENV}`);
-    
-    // In production, allow configured origins + no origin (for server-to-server)
-    if (process.env.NODE_ENV === 'production') {
-      // Allow requests with no origin (mobile apps, server-to-server, Postman)
-      if (!origin) {
-        return callback(null, true);
-      }
-      
-      // Check if origin is in allowed list
-      if (allowed.length > 0 && allowed.includes(origin)) {
-        return callback(null, true);
-      }
-      
-      // If no CLIENT_URL configured, allow all (fallback for deployment)
-      if (allowed.length === 0) {
-        console.warn('[CORS] No CLIENT_URL configured, allowing all origins');
-        return callback(null, true);
-      }
-      
-      console.error(`[CORS] Origin '${origin}' not in allowed list: ${allowed.join(', ')}`);
-      return callback(new Error(`CORS: Origin '${origin}' not allowed`));
-    }
-    
-    // In development, allow localhost and configured origins
-    if (!origin || allowed.includes(origin) || 
-        (origin && (origin.includes('localhost') || origin.includes('127.0.0.1')))) {
-      return callback(null, true);
-    }
-    
-    return callback(new Error(`CORS: Origin '${origin}' not allowed`));
-  },
+  origin: true, // TEMPORARY: Allow all origins
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'x-auth-user-id', 'x-requested-with'],
   credentials: true,
-  optionsSuccessStatus: 200 // For legacy browser support
+  optionsSuccessStatus: 200,
+  preflightContinue: false
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -82,19 +49,27 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // Debug middleware - Log to console in development
-if (process.env.NODE_ENV !== 'production') {
-  app.use((req, res, next) => {
-    const start = Date.now();
-    res.on('finish', () => {
-      const duration = Date.now() - start;
-      console.log(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl} - Status: ${res.statusCode} (${duration}ms)`);
-    });
-    next();
+app.use((req, res, next) => {
+  const start = Date.now();
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl} - Origin: ${req.headers.origin}`);
+  res.on('finish', () => {
+    const duration = Date.now() - start;
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl} - Status: ${res.statusCode} (${duration}ms)`);
   });
-}
+  next();
+});
 
 // Routes
 app.use('/api', routes);
+
+// Explicit OPTIONS handler for all routes
+app.options('*', (req, res) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-auth-user-id, x-requested-with');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.sendStatus(200);
+});
 
 // 404 Handler for API
 app.use('/api', (req, res) => {
