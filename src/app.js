@@ -58,8 +58,18 @@ app.use('/api/upload', (req, res, next) => {
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Serve file upload tĩnh
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+// Serve file upload tĩnh với CORS headers
+app.use('/uploads', (req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type');
+  
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+  
+  next();
+}, express.static(path.join(__dirname, '../uploads')));
 
 // Debug middleware - Log to console in development
 app.use((req, res, next) => {
