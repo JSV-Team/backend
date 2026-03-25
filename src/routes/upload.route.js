@@ -23,14 +23,15 @@ router.post("/avatar", (req, res, next) => {
     }
     
     // Validate file content
-    validateFileContent(req, res, (validationErr) => {
-      if (validationErr) return;
-      
+    validateFileContent(req, res, () => {
       const fileInfo = getFileInfo(req.file);
       // Force HTTPS - check X-Forwarded-Proto for reverse proxy (Render, Heroku, etc)
       const protocol = req.get('X-Forwarded-Proto') || req.protocol || 'https';
       const host = req.get('X-Forwarded-Host') || req.get('host');
       const fullUrl = `https://${host}${fileInfo.url}`;
+      
+      console.log(`✅ Avatar uploaded successfully: ${req.file.filename}`);
+      console.log(`   Full URL: ${fullUrl}`);
       
       res.json({ 
         success: true,
