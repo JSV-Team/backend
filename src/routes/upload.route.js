@@ -32,10 +32,6 @@ router.post("/avatar", async (req, res, next) => {
       });
 
       const fileInfo = getFileInfo(req.file);
-      // Force HTTPS - check X-Forwarded-Proto for reverse proxy (Render, Heroku, etc)
-      const protocol = req.get('X-Forwarded-Proto') || req.protocol || 'https';
-      const host = req.get('X-Forwarded-Host') || req.get('host');
-      const fullUrl = `https://${host}${fileInfo.url}`;
       
       // Update user avatar in database
       const { getPool } = require('../config/db');
@@ -54,11 +50,7 @@ router.post("/avatar", async (req, res, next) => {
       res.json({ 
         success: true,
         message: 'Upload ảnh đại diện thành công',
-        data: {
-          ...fileInfo,
-          // Không trả về fullUrl vì backend không biết chính xác domain
-          // Frontend tự build URL đầy đủ qua buildAvatarUrl(data.url)
-        }
+        data: fileInfo
       });
     } catch (error) {
       console.error('Avatar upload error:', error);
@@ -151,21 +143,13 @@ router.post('/image', (req, res, next) => {
 
     // Skip validation temporarily and return success
     const fileInfo = getFileInfo(req.file);
-    // Force HTTPS - check X-Forwarded-Proto for reverse proxy (Render, Heroku, etc)
-    const protocol = req.get('X-Forwarded-Proto') || req.protocol || 'https';
-    const host = req.get('X-Forwarded-Host') || req.get('host');
-    const fullUrl = `https://${host}${fileInfo.url}`;
     
     console.log(`✅ Image uploaded successfully: ${req.file.filename}`);
     
     res.json({
       success: true,
       message: 'Upload ảnh thành công',
-      data: {
-        ...fileInfo,
-        // Không trả về fullUrl vì backend không biết chính xác domain
-        // Frontend tự build URL qua buildAvatarUrl(data.url)
-      }
+      data: fileInfo
     });
   });
 });
