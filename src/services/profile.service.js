@@ -93,6 +93,20 @@ exports.updateInterests = async (userId, interests) => {
   }
 };
 
+// Lấy tất cả sở thích có trong hệ thống
+exports.getAllInterests = async () => {
+  console.log(">>> [SERVICE] getAllInterests called");
+  try {
+    const pool = await getPool();
+    const r = await pool.query(`SELECT interest_id, name FROM interests ORDER BY name`);
+    console.log(`>>> [SERVICE] getAllInterests success, count: ${r.rows.length}`);
+    return r.rows;
+  } catch (error) {
+    console.error(">>> [SERVICE] getAllInterests ERROR:", error);
+    throw error;
+  }
+};
+
 // Lấy thống kê theo dõi
 exports.getFollowStats = async (userId) => {
   const pool = await getPool();

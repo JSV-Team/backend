@@ -38,6 +38,11 @@ router.patch('/pending-activities/:id/reject', verifyToken, activityController.r
 router.post('/join', verifyToken, activityController.joinActivity);
 
 // =============================================
+// GET /api/activities/user/:userId (Public - list activities by user)
+// =============================================
+router.get('/user/:userId', activityController.getActivitiesByUserId);
+
+// =============================================
 // DELETE /api/activities/:id (Protected)
 // =============================================
 router.delete('/:id', verifyToken, activityController.deleteActivity);

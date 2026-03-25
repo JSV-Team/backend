@@ -129,6 +129,17 @@ const createActivity = asyncHandler(async (req, res) => {
     }
 });
 
+const getActivitiesByUserId = asyncHandler(async (req, res) => {
+    try {
+        const userId = parseInt(req.params.userId || req.params.id);
+        const result = await activityService.getActivitiesByUserId(userId);
+        res.json(result);
+    } catch (error) {
+        console.error('Lỗi khi lấy hoạt động của user:', error);
+        res.status(500).json({ message: 'Lỗi Server' });
+    }
+});
+
 module.exports = {
     getPendingActivities,
     deleteActivityRequest,
@@ -138,5 +149,6 @@ module.exports = {
     rejectActivityRequest,
     getPendingApprovals,
     deleteActivity,
-    createActivity
+    createActivity,
+    getActivitiesByUserId
 };

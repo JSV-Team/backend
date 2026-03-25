@@ -3,6 +3,11 @@ const router = express.Router();
 const profileController = require('../controllers/profile.controller');
 const { verifyToken, isOwner, isAdmin } = require('../middlewares/auth.middleware');
 
+// @route   GET /api/profile/all-interests
+// @desc    Lấy tất cả sở thích có trong hệ thống
+// @access  Public
+router.get('/all-interests', profileController.getAllAvailableInterests);
+
 // @route   PUT /api/profile/password
 // @desc    Đổi mật khẩu
 // @access  Private

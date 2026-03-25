@@ -1,7 +1,7 @@
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-const fileType = require('file-type');
+// const fileType = require('file-type'); // Temporarily disabled as it's ESM-only and currently unused in the code below
 
 // Tạo thư mục uploads nếu chưa có
 const uploadDir = path.join(__dirname, '../../uploads');
