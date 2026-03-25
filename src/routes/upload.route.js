@@ -27,9 +27,10 @@ router.post("/avatar", (req, res, next) => {
       if (validationErr) return;
       
       const fileInfo = getFileInfo(req.file);
-      // Force HTTPS for production URLs
-      const protocol = process.env.NODE_ENV === 'production' ? 'https' : req.protocol;
-      const fullUrl = `${protocol}://${req.get('host')}${fileInfo.url}`;
+      // Force HTTPS - check X-Forwarded-Proto for reverse proxy (Render, Heroku, etc)
+      const protocol = req.get('X-Forwarded-Proto') || req.protocol || 'https';
+      const host = req.get('X-Forwarded-Host') || req.get('host');
+      const fullUrl = `https://${host}${fileInfo.url}`;
       
       res.json({ 
         success: true,
