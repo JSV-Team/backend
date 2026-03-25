@@ -8,6 +8,9 @@ const compression = require('compression');
 
 const app = express();
 
+// Trust proxy - important for Render, Heroku, etc to get correct protocol/host
+app.set('trust proxy', 1);
+
 // Security headers
 app.use(helmet({
   contentSecurityPolicy: {
