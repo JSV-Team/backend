@@ -1,5 +1,16 @@
 const { getPool } = require("../config/db");
 
+// Helper: Normalize avatar URL to HTTPS
+const normalizeAvatarUrl = (url) => {
+  if (!url) return null;
+  // If already HTTPS, return as-is
+  if (url.startsWith('https://')) return url;
+  // If HTTP, convert to HTTPS
+  if (url.startsWith('http://')) return url.replace('http://', 'https://');
+  // If relative path, return as-is (frontend will handle it)
+  return url;
+};
+
 // Lấy profile của user
 exports.getProfile = async (userId) => {
   const pool = await getPool();
@@ -10,7 +21,11 @@ exports.getProfile = async (userId) => {
     `, [userId]);
 
   if (!r.rows[0]) throw Object.assign(new Error("User not found"), { status: 404 });
-  return r.rows[0];
+  
+  const profile = r.rows[0];
+  // Normalize avatar URL
+  profile.avatar_url = normalizeAvatarUrl(profile.avatar_url);
+  return profile;
 };
 
 // Cập nhật profile
@@ -118,7 +133,12 @@ exports.getMutualFollowers = async (myId, targetId) => {
         SELECT following_id FROM follows WHERE follower_id = $2
       )
     `, [myId, targetId]);
-  return r.rows;
+  
+  // Normalize avatar URLs
+  return r.rows.map(row => ({
+    ...row,
+    avatar_url: normalizeAvatarUrl(row.avatar_url)
+  }));
 };
 
 // Kiểm tra xem user có daily_status (Story) đang hoạt động không
