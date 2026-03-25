@@ -1,12 +1,17 @@
 const { getPool } = require("../config/db");
 
-// Helper: Normalize avatar URL to HTTPS
+// Helper: Normalize avatar URL to HTTPS (except for local development)
 const normalizeAvatarUrl = (url) => {
   if (!url) return null;
-  // If already HTTPS, return as-is
-  if (url.startsWith('https://')) return url;
+  // If already HTTPS or data URL, return as-is
+  if (url.startsWith('https://') || url.startsWith('data:')) return url;
+  
+  // Skip HTTPS conversion for localhost and 127.0.0.1
+  if (url.includes('localhost') || url.includes('127.0.0.1')) return url;
+
   // If HTTP, convert to HTTPS
   if (url.startsWith('http://')) return url.replace('http://', 'https://');
+  
   // If relative path, return as-is (frontend will handle it)
   return url;
 };
