@@ -1,5 +1,15 @@
 const { getPool } = require("../config/db");
 
+// Helper logic to ensure we only save relative paths
+const sanitizeUrlForDb = (url) => {
+  if (!url) return null;
+  if (url.includes('127.0.0.1') || url.includes('localhost')) {
+    const parts = url.split(/\/uploads\//);
+    if (parts.length > 1) return '/uploads/' + parts[1];
+  }
+  return url;
+};
+
 // Lấy profile của user
 exports.getUserProfile = async (userId) => {
   const pool = getPool();
@@ -26,7 +36,7 @@ exports.updateUserProfile = async (userId, payload) => {
     `;
   await pool.query(query, [
     full_name ?? null,
-    avatar_url ?? null,
+    sanitizeUrlForDb(avatar_url) ?? null,
     bio ?? null,
     location ?? null,
     userId
