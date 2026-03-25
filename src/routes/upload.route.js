@@ -48,7 +48,7 @@ router.post("/avatar", async (req, res, next) => {
       );
       
       console.log(`✅ Avatar uploaded successfully: ${req.file.filename}`);
-      console.log(`   Full URL: ${fullUrl}`);
+      console.log(`   Relative URL: ${fileInfo.url}`);
       console.log(`   Updated user ${userId} avatar`);
       
       res.json({ 
@@ -56,7 +56,8 @@ router.post("/avatar", async (req, res, next) => {
         message: 'Upload ảnh đại diện thành công',
         data: {
           ...fileInfo,
-          fullUrl
+          // Không trả về fullUrl vì backend không biết chính xác domain
+          // Frontend tự build URL đầy đủ qua buildAvatarUrl(data.url)
         }
       });
     } catch (error) {
@@ -156,14 +157,14 @@ router.post('/image', (req, res, next) => {
     const fullUrl = `https://${host}${fileInfo.url}`;
     
     console.log(`✅ Image uploaded successfully: ${req.file.filename}`);
-    console.log(`   Full URL: ${fullUrl}`);
     
     res.json({
       success: true,
       message: 'Upload ảnh thành công',
       data: {
         ...fileInfo,
-        fullUrl
+        // Không trả về fullUrl vì backend không biết chính xác domain
+        // Frontend tự build URL qua buildAvatarUrl(data.url)
       }
     });
   });
