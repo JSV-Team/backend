@@ -91,15 +91,6 @@ const getAdminStats = async (req, res) => {
         `);
         let matchStats = matchStatsResult.rows[0];
 
-        const matchClassResult = await pool.query(`
-            SELECT match_type as name, COUNT(*)::int as value 
-            FROM match_sessions 
-            GROUP BY match_type
-        `);
-        let matchClassification = matchClassResult.rows.map(r => ({
-            name: r.name === 'random' ? 'Ngẫu nhiên' : (r.name === 'selective' ? 'Chọn lọc' : (r.name || 'Khác')),
-            value: r.value
-        }));
 
         const recentMatchesResult = await pool.query(`
             SELECT m.match_id, m.status, m.created_at,
@@ -158,7 +149,7 @@ const getAdminStats = async (req, res) => {
                     { title: 'Báo cáo chờ xử lý', value: pendingReports.toLocaleString(), trend: `+ ${pendingReportsThisWeek} mới`, trendType: 'up' }
                 ],
                 activityData: { Week: weekData, Month: monthData, Year: yearData },
-                matchData: { stats: matchStats, classification: matchClassification, recent: recentMatches },
+                matchData: { stats: matchStats, recent: recentMatches },
                 reportData,
                 recentActivities: formattedRecent
             }
