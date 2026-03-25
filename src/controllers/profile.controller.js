@@ -294,6 +294,23 @@ const getInterests = async (req, res) => {
     }
 };
 
+const getAllAvailableInterests = async (req, res) => {
+    try {
+        const interests = await profileService.getAllInterests();
+        return res.status(200).json({
+            success: true,
+            data: interests
+        });
+    } catch (error) {
+        console.error("Lỗi tại Profile Controller - getAllAvailableInterests:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Lỗi server nội bộ!",
+            error: error.message
+        });
+    }
+};
+
 const followUser = async (req, res) => {
     console.log(`>>> [CONTROLLER] followUser - target: ${req.params.userId}, my: ${req.user?.user_id}`);
     try {
@@ -325,6 +342,7 @@ module.exports = {
     updateInterests,
     updateProfileById,
     getInterests,
+    getAllAvailableInterests,
     followUser,
     unfollowUser
 };

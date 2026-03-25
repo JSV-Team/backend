@@ -104,7 +104,7 @@ const rejectActivityRequest = async (requestId) => {
     return requestData;
 };
 
-const getUserActivities = async (userId) => {
+const getActivitiesByUserId = async (userId) => {
     return await activityModel.getUserActivities(userId);
 };
 
@@ -117,5 +117,5 @@ module.exports = {
     rejectActivityRequest,
     getPendingApprovals,
     deleteActivity,
-    getUserActivities
+    getActivitiesByUserId
 };

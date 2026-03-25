@@ -34,15 +34,17 @@ const startServer = async () => {
         ALTER TABLE Conversations DROP CONSTRAINT IF EXISTS CHK_Conversation_Type;
         ALTER TABLE Conversations ADD CONSTRAINT CHK_Conversation_Type CHECK (conversation_type IN ('direct', 'group', 'activity', 'private'));
         
+        ALTER TABLE conversation_members ADD COLUMN IF NOT EXISTS last_read_at TIMESTAMPTZ DEFAULT NOW();
+        
         ALTER TABLE activities DROP CONSTRAINT IF EXISTS chk_activities_status;
         ALTER TABLE activities ADD CONSTRAINT chk_activities_status CHECK (status IN ('active', 'deleted', 'profile'));
         
         ALTER TABLE match_sessions DROP CONSTRAINT IF EXISTS chk_match_type;
         ALTER TABLE match_sessions ADD CONSTRAINT chk_match_type CHECK (match_type IN ('random', 'selective', 'interest'));
       `);
-      console.log('✅ DB Constraints auto-patched for new features');
+      console.log('✅ DB Constraints & Columns auto-patched for new features');
     } catch (dbErr) {
-      console.log('⚠️ Could not patch DB Constraint:', dbErr.message);
+      console.log('⚠️ Could not patch DB:', dbErr.message);
     }
 
     server.listen(PORT, () => {
