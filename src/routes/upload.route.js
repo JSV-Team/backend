@@ -9,8 +9,8 @@ const { upload, validateFileContent, handleUploadError, getFileInfo } = require(
 router.use(verifyToken);
 
 // POST /api/upload/avatar - Upload ảnh đại diện
-router.post("/avatar", (req, res, next) => {
-  upload.single("avatar")(req, res, (err) => {
+router.post("/avatar", async (req, res, next) => {
+  upload.single("avatar")(req, res, async (err) => {
     if (err) {
       return handleUploadError(err, req, res, next);
     }
@@ -22,26 +22,47 @@ router.post("/avatar", (req, res, next) => {
       });
     }
     
-    // Validate file content
-    validateFileContent(req, res, () => {
+    try {
+      // Validate file content
+      await new Promise((resolve, reject) => {
+        validateFileContent(req, res, (err) => {
+          if (err) reject(err);
+          else resolve();
+        });
+      });
+
       const fileInfo = getFileInfo(req.file);
-      // Force HTTPS - check X-Forwarded-Proto for reverse proxy (Render, Heroku, etc)
-      const protocol = req.get('X-Forwarded-Proto') || req.protocol || 'https';
-      const host = req.get('X-Forwarded-Host') || req.get('host');
-      const fullUrl = `https://${host}${fileInfo.url}`;
+      
+      // Update user avatar in database
+      const { getPool } = require('../config/db');
+      const pool = getPool();
+      const userId = req.user.user_id;
+      
+      await pool.query(
+        'UPDATE users SET avatar_url = $1 WHERE user_id = $2',
+        [fileInfo.url, userId]
+      );
       
       console.log(`✅ Avatar uploaded successfully: ${req.file.filename}`);
-      console.log(`   Full URL: ${fullUrl}`);
+      console.log(`   Relative URL: ${fileInfo.url}`);
+      console.log(`   Updated user ${userId} avatar`);
       
       res.json({ 
         success: true,
         message: 'Upload ảnh đại diện thành công',
-        data: {
-          ...fileInfo,
-          fullUrl
-        }
+        data: fileInfo
       });
-    });
+    } catch (error) {
+      console.error('Avatar upload error:', error);
+      // Clean up uploaded file on error
+      if (req.file && req.file.path && fs.existsSync(req.file.path)) {
+        fs.unlinkSync(req.file.path);
+      }
+      return res.status(400).json({
+        success: false,
+        message: error.message || 'Lỗi khi upload ảnh đại diện'
+      });
+    }
   });
 });
 
@@ -122,21 +143,13 @@ router.post('/image', (req, res, next) => {
 
     // Skip validation temporarily and return success
     const fileInfo = getFileInfo(req.file);
-    // Force HTTPS - check X-Forwarded-Proto for reverse proxy (Render, Heroku, etc)
-    const protocol = req.get('X-Forwarded-Proto') || req.protocol || 'https';
-    const host = req.get('X-Forwarded-Host') || req.get('host');
-    const fullUrl = `https://${host}${fileInfo.url}`;
     
     console.log(`✅ Image uploaded successfully: ${req.file.filename}`);
-    console.log(`   Full URL: ${fullUrl}`);
     
     res.json({
       success: true,
       message: 'Upload ảnh thành công',
-      data: {
-        ...fileInfo,
-        fullUrl
-      }
+      data: fileInfo
     });
   });
 });

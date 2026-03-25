@@ -90,7 +90,11 @@ const upload = multer({
 
 // Middleware kiểm tra nội dung file thực tế
 const validateFileContent = async (req, res, next) => {
-    if (!req.file) return next();
+    if (!req.file) {
+        // If next is a function (callback style), call it
+        if (typeof next === 'function') return next();
+        return;
+    }
     
     try {
         const filePath = req.file.path;
@@ -99,6 +103,8 @@ const validateFileContent = async (req, res, next) => {
         // Kiểm tra file có tồn tại và có kích thước
         if (fileStats.size === 0) {
             fs.unlinkSync(filePath);
+            const error = new Error('File rỗng hoặc bị lỗi');
+            if (typeof next === 'function') return next(error);
             return res.status(400).json({
                 success: false,
                 message: 'File rỗng hoặc bị lỗi'
@@ -109,12 +115,17 @@ const validateFileContent = async (req, res, next) => {
         // The file-type package might have issues on Render
         console.log(`✅ File uploaded: ${req.file.filename} (${Math.round(fileStats.size / 1024)}KB)`);
         req.file.actualSize = fileStats.size;
-        next();
+        
+        // Call next as callback if provided
+        if (typeof next === 'function') next();
         
     } catch (error) {
         console.error('File validation error:', error);
         if (req.file && req.file.path && fs.existsSync(req.file.path)) {
             fs.unlinkSync(req.file.path);
+        }
+        if (typeof next === 'function') {
+            return next(error);
         }
         return res.status(400).json({
             success: false,
