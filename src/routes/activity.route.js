@@ -13,6 +13,9 @@ router.get('/', activityController.getActivities);
 // =============================================
 router.get('/pending-activities', verifyToken, activityController.getPendingActivities);
 
+// Alias for backward compatibility
+router.get('/pending', verifyToken, activityController.getPendingActivities);
+
 // =============================================
 // DELETE /api/activities/pending-activities/:id (Protected)
 // =============================================
