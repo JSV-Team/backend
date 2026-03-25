@@ -2,10 +2,10 @@ const { getPool } = require("../config/db");
 
 const normalizeAvatarUrl = (url) => {
   if (!url) return null;
-  
+
   // If it's a relative path starting with /uploads, return as-is
   if (url.startsWith('/uploads/')) return url;
-  
+
   // If it's a localhost/127.0.0.1 URL, strip it to relative
   if (url.includes('127.0.0.1') || url.includes('localhost')) {
     const parts = url.split(/\/uploads\//);
@@ -14,12 +14,12 @@ const normalizeAvatarUrl = (url) => {
 
   // If already HTTPS or external, return as-is
   if (url.startsWith('https://') || url.includes('googleusercontent') || url.includes('facebook')) return url;
-  
+
   // If HTTP and NOT a local IP, convert to HTTPS
   if (url.startsWith('http://') && !url.includes('127.0.0.1') && !url.includes('localhost')) {
     return url.replace('http://', 'https://');
   }
-  
+
   return url;
 };
 
@@ -33,7 +33,7 @@ exports.getProfile = async (userId) => {
     `, [userId]);
 
   if (!r.rows[0]) throw Object.assign(new Error("User not found"), { status: 404 });
-  
+
   const profile = r.rows[0];
   // Normalize avatar URL
   profile.avatar_url = normalizeAvatarUrl(profile.avatar_url);
@@ -159,7 +159,7 @@ exports.getMutualFollowers = async (myId, targetId) => {
         SELECT following_id FROM follows WHERE follower_id = $2
       )
     `, [myId, targetId]);
-  
+
   // Normalize avatar URLs
   return r.rows.map(row => ({
     ...row,
@@ -189,7 +189,7 @@ exports.followUser = async (myId, targetId) => {
     VALUES ($1, $2, NOW())
     ON CONFLICT (follower_id, following_id) DO NOTHING
   `, [myId, targetId]);
-  
+
   return { ok: true };
 };
 
