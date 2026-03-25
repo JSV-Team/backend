@@ -110,16 +110,6 @@ const getAdminStats = async (req, res) => {
             avatars: [m.user1_avatar, m.user2_avatar]
         }));
 
-        // Reports by type
-        const reportsByTypeResult = await pool.query(`
-            SELECT reason as name, COUNT(*)::int as value 
-            FROM reports 
-            GROUP BY reason 
-            ORDER BY value DESC 
-            LIMIT 4
-        `);
-        let reportData = reportsByTypeResult.rows;
-
         // Recent activities
         const recentResult = await pool.query(`
             SELECT * FROM (
@@ -127,9 +117,6 @@ const getAdminStats = async (req, res) => {
                 UNION ALL
                 SELECT u.full_name, 'đã tạo bài viết: ' || a.title, a.created_at, '#10b981'
                 FROM activities a JOIN users u ON a.creator_id = u.user_id
-                UNION ALL
-                SELECT u.full_name, 'đã báo cáo vi phạm', r.created_at, '#ef4444'
-                FROM reports r JOIN users u ON r.reporter_id = u.user_id
             ) combined
             ORDER BY created_at DESC
             LIMIT 8
@@ -145,12 +132,10 @@ const getAdminStats = async (req, res) => {
                 stats: [
                     { title: 'Tổng người dùng', value: totalUsers.toLocaleString(), trend: calculateTrend(usersThisWeek, usersLastWeek), trendType: usersThisWeek >= usersLastWeek ? 'up' : 'down' },
                     { title: 'Tổng bài viết', value: totalActivities.toLocaleString(), trend: calculateTrend(activitiesThisWeek, activitiesLastWeek), trendType: activitiesThisWeek >= activitiesLastWeek ? 'up' : 'down' },
-                    { title: 'Người dùng hoạt động', value: activeUsers.toLocaleString(), trend: '+ 2%', trendType: 'up' },
-                    { title: 'Báo cáo chờ xử lý', value: pendingReports.toLocaleString(), trend: `+ ${pendingReportsThisWeek} mới`, trendType: 'up' }
+                    { title: 'Người dùng hoạt động', value: activeUsers.toLocaleString(), trend: '+ 2%', trendType: 'up' }
                 ],
                 activityData: { Week: weekData, Month: monthData, Year: yearData },
                 matchData: { stats: matchStats, recent: recentMatches },
-                reportData,
                 recentActivities: formattedRecent
             }
         });
