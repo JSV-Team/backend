@@ -43,6 +43,18 @@ const startServer = async () => {
         ALTER TABLE match_sessions ADD CONSTRAINT chk_match_type CHECK (match_type IN ('random', 'selective', 'interest'));
       `);
       console.log('✅ DB Constraints & Columns auto-patched for new features');
+      
+      // Fix avatar URLs - remove local domain
+      const fixResult = await pool.query(`
+        UPDATE users 
+        SET avatar_url = REGEXP_REPLACE(avatar_url, '^https?://(127\\.0\\.0\\.1|localhost)(:\\d+)?', '', 'g')
+        WHERE avatar_url LIKE 'http://127.0.0.1%' 
+           OR avatar_url LIKE 'http://localhost%'
+        RETURNING user_id, username, avatar_url;
+      `);
+      if (fixResult.rowCount > 0) {
+        console.log(`✅ Fixed ${fixResult.rowCount} avatar URLs (removed local domain)`);
+      }
     } catch (dbErr) {
       console.log('⚠️ Could not patch DB:', dbErr.message);
     }
