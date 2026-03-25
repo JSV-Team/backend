@@ -3,6 +3,7 @@ const c = require("../controllers/posts.controller");
 const { verifyToken } = require("../middlewares/auth.middleware");
 
 // Public - Read operations
+router.get("/", c.listAll); // Get all posts (feed)
 router.get("/:userId", c.listByUser);
 router.get("/detail/:postId", c.detail);
 router.get("/reactors/:postId", c.reactors);

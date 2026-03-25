@@ -1,5 +1,13 @@
 const s = require("../services/posts.service");
 
+exports.listAll = async (req, res, next) => {
+  try {
+    const page = Number(req.query.page) || 1;
+    const limit = Number(req.query.limit) || 15;
+    res.json(await s.listAll(page, limit));
+  } catch (e) { next(e); }
+};
+
 exports.listByUser = async (req, res, next) => {
   try {
     const userId = Number(req.params.userId);
