@@ -89,14 +89,9 @@ async function joinQueue(userId, userInfo = {}) {
       };
     }
 
-    // Check if user is already in queue
-    if (matchQueue.hasUser(userId)) {
-      return {
-        success: false,
-        error: 'Bạn đang trong hàng đợi',
-        errorCode: 'ALREADY_IN_QUEUE'
-      };
-    }
+    // Proceed with adding/updating user in queue
+    // MatchQueue.addUser now handles both new additions and info updates (like socketId)
+
 
     // Validate user (check status and interests)
     const validation = await validateUser(userId);

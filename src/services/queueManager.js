@@ -8,18 +8,31 @@ class MatchQueue {
   }
 
   /**
-   * Add a user to the queue
+   * Add a user to the queue or update existing user info
    * @param {Object} user - User object with { userId, interests, joinedAt, socketId, status, userInfo }
-   * @returns {boolean} - True if user was added, false if already exists
+   * @returns {boolean} - True if user was added or updated
    */
   addUser(user) {
-    if (!user || !user.userId) {
+    if (!user || user.userId === undefined) {
       return false;
     }
 
-    // Uniqueness invariant: user can only appear once
-    if (this.queue.has(user.userId)) {
-      return false;
+    // Check if user already exists
+    const existingUser = this.queue.get(user.userId);
+    
+    if (existingUser) {
+      // Update existing user info (socketId, interests, etc.) 
+      // but KEEP original joinedAt to preserve queue priority
+      const updatedUser = {
+        ...existingUser,
+        ...user,
+        joinedAt: existingUser.joinedAt, // Preserving original wait time
+        status: user.status || existingUser.status || 'waiting'
+      };
+      
+      this.queue.set(user.userId, updatedUser);
+      console.log(`🔄 Updated queue entry for user ${user.userId} (new socket: ${user.socketId})`);
+      return true;
     }
 
     // Set joinedAt timestamp if not provided
@@ -30,6 +43,7 @@ class MatchQueue {
     };
 
     this.queue.set(user.userId, userData);
+    console.log(`✅ Added new user ${user.userId} to queue (socket: ${user.socketId})`);
     return true;
   }
 

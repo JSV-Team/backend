@@ -118,40 +118,39 @@ async function runMatchingCycle() {
       return alreadyMatchedPairs.has(pair);
     };
     
-    // Helper function: Normalize location - Extract city name from full address
+    // Helper function: Normalize location - Better version that removes accents/tones
     const normalizeLocation = (location) => {
       if (!location) return null;
       
-      // Convert to lowercase and trim
-      let normalized = location.toLowerCase().trim();
+      // Convert to lowercase, trim, and remove accents/tones
+      let normalized = location.toLowerCase().trim()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, "") // Remove accents
+        .replace(/đ/g, "d"); // Special case for 'đ'
       
-      // Common city names in Vietnam
+      // Common city names in Vietnam (accent-less)
       const cities = [
-        'hà nội',
-        'tp. hồ chí minh',
-        'tp.hồ chí minh',
-        'hồ chí minh',
-        'đà nẵng',
-        'hải phòng',
-        'cần thơ',
-        'đà lạt',
-        'huế',
+        'ha noi',
+        'ho chi minh',
+        'da nang',
+        'hai phong',
+        'can tho',
+        'da lat',
+        'hue',
         'nha trang',
-        'vũng tàu',
-        'biên hòa',
-        'bình dương',
-        'đồng nai',
+        'vung tau',
+        'bien hoa',
+        'binh duong',
+        'dong nai',
         'long an',
-        'bà rịa',
-        'quảng ninh',
-        'hạ long',
-        'nam định',
-        'thái bình',
-        'nghệ an',
-        'thanh hóa',
-        'quảng bình',
-        'quảng trị',
-        'thừa thiên huế'
+        'ba ria',
+        'quang ninh',
+        'ha long',
+        'nam dinh',
+        'thai binh',
+        'nghe an',
+        'thanh hoa',
+        'quang binh',
+        'quang tri'
       ];
       
       // Try to find city name in the location string
@@ -161,26 +160,30 @@ async function runMatchingCycle() {
         }
       }
       
-      // If no city found, try to extract from comma-separated address
-      // Usually format: "Street, Ward, District, City"
+      // Fallback: extract last part (city) and clean up
       const parts = normalized.split(',').map(p => p.trim());
       if (parts.length > 0) {
-        // Return the last part (usually the city)
-        const lastPart = parts[parts.length - 1];
-        // Remove "vietnam" if present
-        return lastPart.replace(/vietnam/g, '').trim();
+        let lastPart = parts[parts.length - 1];
+        lastPart = lastPart.replace(/vietnam/g, '').replace(/tinh/g, '').replace(/thanh pho/g, '').replace(/tp/g, '').trim();
+        return lastPart;
       }
       
       return normalized.replace(/\s+/g, ' ');
     };
     
-    // Convert queue users to the format expected by matchEngine (với location và dob)
+    // Convert queue users to the format expected by matchEngine
     const usersForMatching = users.map(u => {
       const userInfo = usersInfoMap.get(u.userId);
       const normalizedLocation = normalizeLocation(userInfo?.location);
+      
+      // Calculate wait time in seconds
+      const now = Date.now();
+      const waitTime = Math.floor((now - new Date(u.joinedAt).getTime()) / 1000);
+      
       return {
         userId: u.userId,
         joinedAt: u.joinedAt,
+        waitTime,
         location: normalizedLocation,
         originalLocation: userInfo?.location || null,
         dob: userInfo?.dob || null
@@ -189,104 +192,81 @@ async function runMatchingCycle() {
     
     console.log(`\n📍 Users with location info:`);
     usersForMatching.forEach((u, idx) => {
-      console.log(`   ${idx + 1}. User ${u.userId}: location="${u.originalLocation}" (normalized: "${u.location}"), dob=${u.dob}`);
+      console.log(`   ${idx + 1}. User ${u.userId}: location="${u.location}" (wait: ${u.waitTime}s), dob=${u.dob}`);
     });
 
-    // ===== BƯỚC 2: LỌC THEO LOCATION - Nhóm users theo location =====
-    const locationGroups = new Map();
-    usersForMatching.forEach(user => {
-      if (!user.location) {
-        console.log(`   ⚠️  User ${user.userId} has no location - skipping`);
-        return;
-      }
-      
-      if (!locationGroups.has(user.location)) {
-        locationGroups.set(user.location, []);
-      }
-      locationGroups.get(user.location).push(user);
-    });
-    
-    console.log(`\n🗺️  Location groups (normalized):`);
-    locationGroups.forEach((groupUsers, location) => {
-      const originalLocations = groupUsers.map(u => u.originalLocation).join(', ');
-      console.log(`   📍 "${location}": ${groupUsers.length} users - [${groupUsers.map(u => u.userId).join(', ')}]`);
-      console.log(`      Original: [${originalLocations}]`);
-    });
-
-    // ===== BƯỚC 3: TÌM MATCH TRONG TỪNG NHÓM LOCATION (BỎ QUA ĐÃ MATCH) =====
+    // ===== BƯỚC 2: TÌM MATCH ƯU TIÊN LOCATION =====
     let bestMatch = null;
-    let bestMatchLocation = null;
-    
-    for (const [location, groupUsers] of locationGroups.entries()) {
-      if (groupUsers.length < 2) {
-        console.log(`   ⏭️  Skipping location "${location}" - only ${groupUsers.length} user(s)`);
-        continue;
-      }
-      
-      console.log(`\n🔍 Finding best match in location "${location}" (${groupUsers.length} users)...`);
-      
-      // Lọc bỏ các cặp đã match
-      const validPairs = [];
-      for (let i = 0; i < groupUsers.length; i++) {
-        for (let j = i + 1; j < groupUsers.length; j++) {
-          const user1 = groupUsers[i];
-          const user2 = groupUsers[j];
-          
-          if (hasAlreadyMatched(user1.userId, user2.userId)) {
-            console.log(`   🚫 Skipping pair User ${user1.userId} <-> User ${user2.userId} (already matched)`);
-            continue;
-          }
-          
-          validPairs.push([user1, user2]);
+    let candidatesToEvaluate = [];
+
+    // Evaluate ALL pairs in the queue since N is small
+    // This allows cross-location matching if no local matches are found
+    for (let i = 0; i < usersForMatching.length; i++) {
+      for (let j = i + 1; j < usersForMatching.length; j++) {
+        const user1 = usersForMatching[i];
+        const user2 = usersForMatching[j];
+
+        if (hasAlreadyMatched(user1.userId, user2.userId)) {
+          continue;
         }
-      }
-      
-      if (validPairs.length === 0) {
-        console.log(`   ❌ No valid pairs in "${location}" (all pairs already matched)`);
-        continue;
-      }
-      
-      console.log(`   ✅ Found ${validPairs.length} valid pair(s) to evaluate`);
-      
-      // Tìm match tốt nhất trong các cặp hợp lệ
-      let bestMatchInGroup = null;
-      let bestScoreInGroup = -1;
-      
-      for (const [user1, user2] of validPairs) {
-        const matchResult = await matchingEngine.calculateMatchScore(user1, user2);
-        
-        console.log(`   🧮 User ${user1.userId} <-> User ${user2.userId}: Score ${matchResult.score}%`);
-        
-        if (matchResult.score > matchingEngine.minScoreThreshold && matchResult.score > bestScoreInGroup) {
-          bestScoreInGroup = matchResult.score;
-          bestMatchInGroup = matchResult;
-        }
-      }
-      
-      if (bestMatchInGroup) {
-        console.log(`   ✅ Best match in "${location}": User ${bestMatchInGroup.user1Id} <-> User ${bestMatchInGroup.user2Id} (Score: ${bestMatchInGroup.score}%)`);
-        
-        // Lưu match tốt nhất (có thể so sánh score nếu có nhiều nhóm)
-        if (!bestMatch || bestMatchInGroup.score > bestMatch.score) {
-          bestMatch = bestMatchInGroup;
-          bestMatchLocation = location;
-        }
-      } else {
-        console.log(`   ❌ No valid match in "${location}" (no pairs meet threshold)`);
+
+        candidatesToEvaluate.push({ user1, user2 });
       }
     }
-    
-    if (!bestMatch) {
-      console.log(`\n❌ No valid match found in any location group`);
-      console.log(`💡 Tip: Users need to be in the same location and have common interests`);
+
+    if (candidatesToEvaluate.length === 0) {
+      console.log(`❌ No valid unique pairs found in queue (or all already matched)`);
       console.log(`🔄 ========== MATCHING CYCLE END ==========\n`);
-      return; // No valid match found
+      return;
     }
+
+    const evaluatedPairs = [];
+    for (const { user1, user2 } of candidatesToEvaluate) {
+      const sameLocation = user1.location === user2.location && user1.location !== null;
+      
+      // Calculate base score
+      const matchResult = await matchingEngine.calculateMatchScore(user1, user2);
+      
+      // ===== LOCATION RULES =====
+      // 1. Same location gets a 20% bonus
+      // 2. Different location is ONLY allowed if at least one user has been waiting > 40s
+      
+      let finalScore = matchResult.score;
+      if (sameLocation) {
+        finalScore = Math.min(finalScore + 20, 100);
+        console.log(`   🏠 [LOCAL] User ${user1.userId} <-> User ${user2.userId}: Base ${matchResult.score}% -> Bonus ${finalScore}%`);
+      } else {
+        const canCrossMatch = user1.waitTime > 40 || user2.waitTime > 40;
+        if (!canCrossMatch) {
+          console.log(`   ⏭️ [LOCATION] Skipping cross-match User ${user1.userId} (wait ${user1.waitTime}s) <-> User ${user2.userId} (wait ${user2.waitTime}s) - wait time too short`);
+          continue;
+        }
+        console.log(`   🌍 [GLOBAL] User ${user1.userId} <-> User ${user2.userId}: Score ${finalScore}% (Cross-matching enabled for long wait)`);
+      }
+
+      evaluatedPairs.push({
+        ...matchResult,
+        finalScore,
+        sameLocation
+      });
+    }
+
+    if (evaluatedPairs.length === 0) {
+      console.log(`❌ No pairs meeting criteria after evaluation`);
+      console.log(`🔄 ========== MATCHING CYCLE END ==========\n`);
+      return;
+    }
+
+    // Sort by finalScore descending
+    evaluatedPairs.sort((a, b) => b.finalScore - a.finalScore);
+    bestMatch = evaluatedPairs[0];
+    const bestMatchLocation = bestMatch.sameLocation ? usersForMatching.find(u => u.userId === bestMatch.user1Id).location : 'MULTIPLE';
+
 
     console.log(`\n✅ BEST MATCH FOUND!`);
     console.log(`   Location: ${bestMatchLocation}`);
     console.log(`   User ${bestMatch.user1Id} <-> User ${bestMatch.user2Id}`);
-    console.log(`   Score: ${bestMatch.score}%`);
+    console.log(`   Score: ${bestMatch.finalScore}% (base: ${bestMatch.score}%)`);
     if (bestMatch.interestScore !== undefined) {
       console.log(`   Interest Score: ${bestMatch.interestScore}/70`);
     }
@@ -307,17 +287,18 @@ async function runMatchingCycle() {
     }
 
     // Create match session with score
-    const matchScore = Math.round(bestMatch.score || 0);  // Use .score not .totalScore
+    const matchScore = Math.round(bestMatch.finalScore || 0); 
     const validScore = isNaN(matchScore) || matchScore < 0 ? 0 : matchScore;
     
-    console.log(`💾 Saving match with score: ${validScore} (original: ${bestMatch.score})`);
+    console.log(`Saved match with final score: ${validScore}`);
     
     const matchSession = await matchService.createMatchSession(
       user1Id, 
       user2Id, 
       'interest',
-      validScore  // Save validated match score
+      validScore
     );
+
 
     // Create conversation
     const conversationId = await matchService.createConversation(user1Id, user2Id);
@@ -337,8 +318,8 @@ async function runMatchingCycle() {
         avatar_url: user2Data.userInfo?.avatar_url,
         bio: user2Data.userInfo?.bio
       },
-      score: bestMatch.score,
-      interestScore: bestMatch.score,  // Add for compatibility
+      score: bestMatch.finalScore,
+      interestScore: bestMatch.finalScore,
       commonInterests: bestMatch.commonInterests
     };
 
@@ -352,8 +333,8 @@ async function runMatchingCycle() {
         avatar_url: user1Data.userInfo?.avatar_url,
         bio: user1Data.userInfo?.bio
       },
-      score: bestMatch.score,
-      interestScore: bestMatch.score,  // Add for compatibility
+      score: bestMatch.finalScore,
+      interestScore: bestMatch.finalScore,
       commonInterests: bestMatch.commonInterests
     };
 
