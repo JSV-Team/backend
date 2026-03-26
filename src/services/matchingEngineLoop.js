@@ -11,6 +11,9 @@ const matchingEngine = new matchEngine();
 let matchingInterval = null;
 let ioInstance = null;
 
+// ===== VERSION CHECK =====
+console.log('🔥🔥🔥 [LOADED] matchingEngineLoop.js - VERSION 2.0 - WITH LOCATION FILTER & ALREADY MATCHED CHECK 🔥🔥🔥');
+
 /**
  * Start the matching engine loop
  * Runs every 2 seconds to find and create matches
@@ -72,26 +75,224 @@ async function runMatchingCycle() {
       console.log(`   ${idx + 1}. User ${u.userId}: ${u.interests?.length || 0} interests - [${u.interests?.join(', ') || 'none'}]`);
     });
     
-    // Convert queue users to the format expected by matchEngine
-    const usersForMatching = users.map(u => ({
-      userId: u.userId,
-      joinedAt: u.joinedAt
-    }));
+    // ===== BƯỚC 1: LẤY THÔNG TIN ĐẦY ĐỦ CỦA USERS (bao gồm location, dob) =====
+    const { getPool } = require('../config/db');
+    const pool = getPool();
+    
+    const userIds = users.map(u => u.userId);
+    const usersInfoQuery = await pool.query(
+      'SELECT user_id, username, location, dob FROM users WHERE user_id = ANY($1)',
+      [userIds]
+    );
+    
+    const usersInfoMap = new Map();
+    usersInfoQuery.rows.forEach(row => {
+      usersInfoMap.set(row.user_id, row);
+    });
+    
+    // ===== BƯỚC 1.5: LẤY DANH SÁCH CÁC CẶP ĐÃ MATCH =====
+    console.log(`\n🔍 Checking existing matches for users: [${userIds.join(', ')}]`);
+    const existingMatchesQuery = await pool.query(`
+      SELECT user_one, user_two 
+      FROM match_sessions 
+      WHERE (user_one = ANY($1) OR user_two = ANY($1))
+        AND status = 'active'
+    `, [userIds]);
+    
+    const alreadyMatchedPairs = new Set();
+    existingMatchesQuery.rows.forEach(row => {
+      const pair1 = `${row.user_one}-${row.user_two}`;
+      const pair2 = `${row.user_two}-${row.user_one}`;
+      alreadyMatchedPairs.add(pair1);
+      alreadyMatchedPairs.add(pair2);
+    });
+    
+    console.log(`   📋 Found ${existingMatchesQuery.rows.length} existing match sessions`);
+    if (existingMatchesQuery.rows.length > 0) {
+      console.log(`   🚫 Already matched pairs:`, Array.from(alreadyMatchedPairs));
+    }
+    
+    // Helper function: Kiểm tra 2 user đã match chưa
+    const hasAlreadyMatched = (userId1, userId2) => {
+      const pair = `${userId1}-${userId2}`;
+      return alreadyMatchedPairs.has(pair);
+    };
+    
+    // Helper function: Normalize location - Extract city name from full address
+    const normalizeLocation = (location) => {
+      if (!location) return null;
+      
+      // Convert to lowercase and trim
+      let normalized = location.toLowerCase().trim();
+      
+      // Common city names in Vietnam
+      const cities = [
+        'hà nội',
+        'tp. hồ chí minh',
+        'tp.hồ chí minh',
+        'hồ chí minh',
+        'đà nẵng',
+        'hải phòng',
+        'cần thơ',
+        'đà lạt',
+        'huế',
+        'nha trang',
+        'vũng tàu',
+        'biên hòa',
+        'bình dương',
+        'đồng nai',
+        'long an',
+        'bà rịa',
+        'quảng ninh',
+        'hạ long',
+        'nam định',
+        'thái bình',
+        'nghệ an',
+        'thanh hóa',
+        'quảng bình',
+        'quảng trị',
+        'thừa thiên huế'
+      ];
+      
+      // Try to find city name in the location string
+      for (const city of cities) {
+        if (normalized.includes(city)) {
+          return city;
+        }
+      }
+      
+      // If no city found, try to extract from comma-separated address
+      // Usually format: "Street, Ward, District, City"
+      const parts = normalized.split(',').map(p => p.trim());
+      if (parts.length > 0) {
+        // Return the last part (usually the city)
+        const lastPart = parts[parts.length - 1];
+        // Remove "vietnam" if present
+        return lastPart.replace(/vietnam/g, '').trim();
+      }
+      
+      return normalized.replace(/\s+/g, ' ');
+    };
+    
+    // Convert queue users to the format expected by matchEngine (với location và dob)
+    const usersForMatching = users.map(u => {
+      const userInfo = usersInfoMap.get(u.userId);
+      const normalizedLocation = normalizeLocation(userInfo?.location);
+      return {
+        userId: u.userId,
+        joinedAt: u.joinedAt,
+        location: normalizedLocation,
+        originalLocation: userInfo?.location || null,
+        dob: userInfo?.dob || null
+      };
+    });
+    
+    console.log(`\n📍 Users with location info:`);
+    usersForMatching.forEach((u, idx) => {
+      console.log(`   ${idx + 1}. User ${u.userId}: location="${u.originalLocation}" (normalized: "${u.location}"), dob=${u.dob}`);
+    });
 
-    // Find best match pair
-    console.log(`\n🔍 Finding best match among ${usersForMatching.length} users...`);
-    const bestMatch = await matchingEngine.findBestMatch(usersForMatching);
+    // ===== BƯỚC 2: LỌC THEO LOCATION - Nhóm users theo location =====
+    const locationGroups = new Map();
+    usersForMatching.forEach(user => {
+      if (!user.location) {
+        console.log(`   ⚠️  User ${user.userId} has no location - skipping`);
+        return;
+      }
+      
+      if (!locationGroups.has(user.location)) {
+        locationGroups.set(user.location, []);
+      }
+      locationGroups.get(user.location).push(user);
+    });
+    
+    console.log(`\n🗺️  Location groups (normalized):`);
+    locationGroups.forEach((groupUsers, location) => {
+      const originalLocations = groupUsers.map(u => u.originalLocation).join(', ');
+      console.log(`   📍 "${location}": ${groupUsers.length} users - [${groupUsers.map(u => u.userId).join(', ')}]`);
+      console.log(`      Original: [${originalLocations}]`);
+    });
+
+    // ===== BƯỚC 3: TÌM MATCH TRONG TỪNG NHÓM LOCATION (BỎ QUA ĐÃ MATCH) =====
+    let bestMatch = null;
+    let bestMatchLocation = null;
+    
+    for (const [location, groupUsers] of locationGroups.entries()) {
+      if (groupUsers.length < 2) {
+        console.log(`   ⏭️  Skipping location "${location}" - only ${groupUsers.length} user(s)`);
+        continue;
+      }
+      
+      console.log(`\n🔍 Finding best match in location "${location}" (${groupUsers.length} users)...`);
+      
+      // Lọc bỏ các cặp đã match
+      const validPairs = [];
+      for (let i = 0; i < groupUsers.length; i++) {
+        for (let j = i + 1; j < groupUsers.length; j++) {
+          const user1 = groupUsers[i];
+          const user2 = groupUsers[j];
+          
+          if (hasAlreadyMatched(user1.userId, user2.userId)) {
+            console.log(`   🚫 Skipping pair User ${user1.userId} <-> User ${user2.userId} (already matched)`);
+            continue;
+          }
+          
+          validPairs.push([user1, user2]);
+        }
+      }
+      
+      if (validPairs.length === 0) {
+        console.log(`   ❌ No valid pairs in "${location}" (all pairs already matched)`);
+        continue;
+      }
+      
+      console.log(`   ✅ Found ${validPairs.length} valid pair(s) to evaluate`);
+      
+      // Tìm match tốt nhất trong các cặp hợp lệ
+      let bestMatchInGroup = null;
+      let bestScoreInGroup = -1;
+      
+      for (const [user1, user2] of validPairs) {
+        const matchResult = await matchingEngine.calculateMatchScore(user1, user2);
+        
+        console.log(`   🧮 User ${user1.userId} <-> User ${user2.userId}: Score ${matchResult.score}%`);
+        
+        if (matchResult.score > matchingEngine.minScoreThreshold && matchResult.score > bestScoreInGroup) {
+          bestScoreInGroup = matchResult.score;
+          bestMatchInGroup = matchResult;
+        }
+      }
+      
+      if (bestMatchInGroup) {
+        console.log(`   ✅ Best match in "${location}": User ${bestMatchInGroup.user1Id} <-> User ${bestMatchInGroup.user2Id} (Score: ${bestMatchInGroup.score}%)`);
+        
+        // Lưu match tốt nhất (có thể so sánh score nếu có nhiều nhóm)
+        if (!bestMatch || bestMatchInGroup.score > bestMatch.score) {
+          bestMatch = bestMatchInGroup;
+          bestMatchLocation = location;
+        }
+      } else {
+        console.log(`   ❌ No valid match in "${location}" (no pairs meet threshold)`);
+      }
+    }
     
     if (!bestMatch) {
-      console.log(`❌ No valid match found (no pairs meet minimum score threshold)`);
-      console.log(`💡 Tip: Check if users have common interests`);
+      console.log(`\n❌ No valid match found in any location group`);
+      console.log(`💡 Tip: Users need to be in the same location and have common interests`);
       console.log(`🔄 ========== MATCHING CYCLE END ==========\n`);
       return; // No valid match found
     }
 
-    console.log(`\n✅ MATCH FOUND!`);
+    console.log(`\n✅ BEST MATCH FOUND!`);
+    console.log(`   Location: ${bestMatchLocation}`);
     console.log(`   User ${bestMatch.user1Id} <-> User ${bestMatch.user2Id}`);
     console.log(`   Score: ${bestMatch.score}%`);
+    if (bestMatch.interestScore !== undefined) {
+      console.log(`   Interest Score: ${bestMatch.interestScore}/70`);
+    }
+    if (bestMatch.numerologyScore !== undefined) {
+      console.log(`   Numerology Score: ${bestMatch.numerologyScore}/30`);
+    }
     console.log(`   Common interests: ${bestMatch.commonInterests?.length || 0}`);
 
     const { user1Id, user2Id } = bestMatch;
@@ -105,8 +306,18 @@ async function runMatchingCycle() {
       return;
     }
 
-    // Create match session
-    const matchSession = await matchService.createMatchSession(user1Id, user2Id, 'interest');
+    // Create match session with score
+    const matchScore = Math.round(bestMatch.score || 0);  // Use .score not .totalScore
+    const validScore = isNaN(matchScore) || matchScore < 0 ? 0 : matchScore;
+    
+    console.log(`💾 Saving match with score: ${validScore} (original: ${bestMatch.score})`);
+    
+    const matchSession = await matchService.createMatchSession(
+      user1Id, 
+      user2Id, 
+      'interest',
+      validScore  // Save validated match score
+    );
 
     // Create conversation
     const conversationId = await matchService.createConversation(user1Id, user2Id);
@@ -127,6 +338,7 @@ async function runMatchingCycle() {
         bio: user2Data.userInfo?.bio
       },
       score: bestMatch.score,
+      interestScore: bestMatch.score,  // Add for compatibility
       commonInterests: bestMatch.commonInterests
     };
 
@@ -141,6 +353,7 @@ async function runMatchingCycle() {
         bio: user1Data.userInfo?.bio
       },
       score: bestMatch.score,
+      interestScore: bestMatch.score,  // Add for compatibility
       commonInterests: bestMatch.commonInterests
     };
 
