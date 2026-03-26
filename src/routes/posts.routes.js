@@ -15,6 +15,7 @@ router.get("/sharers/:postId", c.sharers);
 router.post("/", verifyToken, c.createPost);
 router.delete("/:postId", verifyToken, c.deletePost);
 router.post("/status", verifyToken, c.createStatus);
+router.post("/status/:userId", verifyToken, c.createStatus);
 router.delete("/status/:statusId", verifyToken, c.deleteStatus);
 router.post("/react/:postId", verifyToken, c.react);
 router.post("/comment/:postId", verifyToken, c.comment);

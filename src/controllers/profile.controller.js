@@ -32,18 +32,18 @@ const getPublicProfile = async (req, res) => {
         const { userId } = req.params;
         const myId = req.query.myId; // Optional myId for mutual context
         
+        // Use getProfile to resolve either ID or Username
         const profile = await profileService.getProfile(userId);
-        const interests = await profileService.getInterests(userId);
+        const targetUserId = profile.user_id;
+
+        const interests = await profileService.getInterests(targetUserId);
+        const stats = await profileService.getFollowStats(targetUserId);
         
-        // New: Fetch follow stats
-        const stats = await profileService.getFollowStats(userId);
-        
-        // New: Fetch mutual followers if myId provided
         let mutualFollowers = [];
         let isFollowing = false;
-        if (myId && myId !== userId) {
-            mutualFollowers = await profileService.getMutualFollowers(myId, userId);
-            isFollowing = await profileService.isFollowing(myId, userId);
+        if (myId && parseInt(myId) !== targetUserId) {
+            mutualFollowers = await profileService.getMutualFollowers(myId, targetUserId);
+            isFollowing = await profileService.isFollowing(myId, targetUserId);
         }
 
         // New: Check for active story
@@ -315,7 +315,9 @@ const followUser = async (req, res) => {
     console.log(`>>> [CONTROLLER] followUser - target: ${req.params.userId}, my: ${req.user?.user_id}`);
     try {
         const myId = req.user.user_id;
-        const targetId = parseInt(req.params.userId);
+        const targetProfile = await profileService.getProfile(req.params.userId);
+        const targetId = targetProfile.user_id;
+        
         await profileService.followUser(myId, targetId);
         res.json({ success: true, message: "Đã theo dõi" });
     } catch (err) {
@@ -326,7 +328,9 @@ const followUser = async (req, res) => {
 const unfollowUser = async (req, res) => {
     try {
         const myId = req.user.user_id;
-        const targetId = parseInt(req.params.userId);
+        const targetProfile = await profileService.getProfile(req.params.userId);
+        const targetId = targetProfile.user_id;
+
         await profileService.unfollowUser(myId, targetId);
         res.json({ success: true, message: "Đã bỏ theo dõi" });
     } catch (err) {

@@ -6,6 +6,8 @@ require('dotenv').config();
 const verifyUser = async (identifier, password) => {
     const pool = await getPool();
 
+    console.log('🔐 Login attempt:', { identifier, passwordLength: password?.length });
+
     // Tìm user theo email hoặc username
     const result = await pool.query(`
         SELECT * FROM users 
@@ -13,20 +15,35 @@ const verifyUser = async (identifier, password) => {
     `, [identifier]);
 
     const user = result.rows[0];
+    
     if (!user) {
+        console.log('❌ User not found:', identifier);
         return { success: false, message: "Tài khoản hoặc mật khẩu không chính xác!" };
     }
 
+    console.log('✅ User found:', { 
+        user_id: user.user_id, 
+        username: user.username, 
+        email: user.email,
+        role: user.role,
+        status: user.status,
+        is_locked: user.is_locked,
+        has_password_hash: !!user.password_hash
+    });
+
     // Kiểm tra tài khoản có bị khóa không
     if (user.status !== 'active' || user.is_locked) {
+        console.log('🔒 Account locked or inactive');
         return { success: false, message: "Tài khoản của bạn đã bị khóa hoặc vô hiệu hóa!" };
     }
 
     // So sánh mật khẩu
+    console.log('🔑 Comparing password...');
     const isMatch = await bcrypt.compare(password, user.password_hash);
-    console.log("BCRYPT MATCH RESULT:", isMatch);
+    console.log('🔑 Password match result:', isMatch);
 
     if (!isMatch) {
+        console.log('❌ Password mismatch');
         return { success: false, message: "Tài khoản hoặc mật khẩu không chính xác!" };
     }
 
@@ -47,6 +64,8 @@ const verifyUser = async (identifier, password) => {
         jwtSecret,
         { expiresIn: '7d' }
     );
+
+    console.log('✅ Login successful for:', user.username);
 
     // Thành công thì xóa password khỏi object để bảo mật
     delete user.password_hash;

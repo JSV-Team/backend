@@ -6,9 +6,10 @@ const chatModel = require('../models/chat.model');
  * @param {number} userOne - First user ID
  * @param {number} userTwo - Second user ID
  * @param {string} matchType - Type of match (default: 'interest')
+ * @param {number} matchScore - Match compatibility score (0-100)
  * @returns {Promise<object>} Created match session
  */
-const createMatchSession = async (userOne, userTwo, matchType = 'interest') => {
+const createMatchSession = async (userOne, userTwo, matchType = 'interest', matchScore = 0) => {
     // Do not match a user with themselves
     if (userOne === userTwo) {
         throw new Error('Không thể ghép đôi với chính mình');
@@ -23,7 +24,7 @@ const createMatchSession = async (userOne, userTwo, matchType = 'interest') => {
     
     // Check if match session already exists
     const checkQuery = `
-        SELECT match_id, user_one, user_two, match_type, status, created_at
+        SELECT match_id, user_one, user_two, match_type, status, created_at, match_score
         FROM match_sessions
         WHERE user_one = $1 AND user_two = $2;
     `;
@@ -35,31 +36,31 @@ const createMatchSession = async (userOne, userTwo, matchType = 'interest') => {
         const match = existingMatch.rows[0];
         console.log(`♻️  Match session already exists: ${match.match_id} (status: ${match.status})`);
         
-        // If match is not active, reactivate it
+        // If match is not active, reactivate it and update score
         if (match.status !== 'active') {
             const updateQuery = `
                 UPDATE match_sessions
-                SET status = 'active', created_at = NOW()
+                SET status = 'active', created_at = NOW(), match_score = $2
                 WHERE match_id = $1
-                RETURNING match_id, user_one, user_two, match_type, status, created_at;
+                RETURNING match_id, user_one, user_two, match_type, status, created_at, match_score;
             `;
-            const updated = await pool.query(updateQuery, [match.match_id]);
-            console.log(`✅ Reactivated match session: ${match.match_id}`);
+            const updated = await pool.query(updateQuery, [match.match_id, matchScore]);
+            console.log(`✅ Reactivated match session: ${match.match_id} with score: ${matchScore}`);
             return updated.rows[0];
         }
         
         return match;
     }
     
-    // Create new match session
+    // Create new match session with score
     const insertQuery = `
-        INSERT INTO match_sessions (user_one, user_two, match_type, requested_by, status, created_at)
-        VALUES ($1, $2, $3, NULL, 'active', NOW())
-        RETURNING match_id, user_one, user_two, match_type, status, created_at;
+        INSERT INTO match_sessions (user_one, user_two, match_type, requested_by, status, created_at, match_score)
+        VALUES ($1, $2, $3, NULL, 'active', NOW(), $4)
+        RETURNING match_id, user_one, user_two, match_type, status, created_at, match_score;
     `;
     
-    const result = await pool.query(insertQuery, [userOneId, userTwoId, matchType]);
-    console.log(`✅ Created new match session: ${result.rows[0].match_id}`);
+    const result = await pool.query(insertQuery, [userOneId, userTwoId, matchType, matchScore]);
+    console.log(`✅ Created new match session: ${result.rows[0].match_id} with score: ${matchScore}`);
     return result.rows[0];
 };
 
@@ -125,6 +126,9 @@ const createConversation = async (userOneId, userTwoId) => {
  * @returns {Promise<Array>} Match history array
  */
 const getMatchHistory = async (userId, limit = 20) => {
+    console.log(`\n📜 [getMatchHistory] Fetching history for user ${userId}, limit: ${limit}`);
+    console.log(`   User ID type: ${typeof userId}`);
+    
     const pool = getPool();
     const query = `
         SELECT 
@@ -134,6 +138,7 @@ const getMatchHistory = async (userId, limit = 20) => {
             ms.match_type,
             ms.status,
             ms.created_at,
+            ms.match_score,
             CASE 
                 WHEN ms.user_one = $1 THEN u2.user_id
                 ELSE u1.user_id
@@ -163,7 +168,32 @@ const getMatchHistory = async (userId, limit = 20) => {
         LIMIT $2;
     `;
     
+    console.log(`   📝 Query params: userId=${userId}, limit=${limit}`);
+    
     const result = await pool.query(query, [userId, limit]);
+    
+    console.log(`   ✅ Query executed. Found ${result.rows.length} match(es)`);
+    if (result.rows.length > 0) {
+        console.log(`   📋 Matches:`, result.rows.map(r => ({
+            match_id: r.match_id,
+            matched_with: r.matched_username,
+            created_at: r.created_at
+        })));
+    } else {
+        console.log(`   ⚠️ No matches found for user ${userId}`);
+        console.log(`   💡 Checking if user exists in any match...`);
+        
+        // Debug: Check if user exists in match_sessions at all
+        const debugQuery = await pool.query(
+            'SELECT match_id, user_one, user_two, status FROM match_sessions WHERE user_one = $1 OR user_two = $1',
+            [userId]
+        );
+        console.log(`   🔍 Total matches (any status): ${debugQuery.rows.length}`);
+        if (debugQuery.rows.length > 0) {
+            console.log(`   📋 All matches:`, debugQuery.rows);
+        }
+    }
+    
     return result.rows;
 };
 

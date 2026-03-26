@@ -23,19 +23,24 @@ const normalizeAvatarUrl = (url) => {
   return url;
 };
 
-// Lấy profile của user
-exports.getProfile = async (userId) => {
+// Lấy profile của user (chấp nhận cả user_id hoặc username)
+exports.getProfile = async (identifier) => {
   const pool = await getPool();
-  const r = await pool.query(`
-      SELECT user_id, username, full_name, email, avatar_url, bio, location,
-             reputation_score, gender, dob, created_at
-      FROM users WHERE user_id=$1
-    `, [userId]);
+  
+  // Kiểm tra xem identifier là ID (số) hay Username (chuỗi)
+  const isId = !isNaN(identifier) && !isNaN(parseFloat(identifier));
+  const query = isId 
+    ? `SELECT user_id, username, full_name, email, avatar_url, bio, location,
+              reputation_score, gender, dob, created_at
+       FROM users WHERE user_id = $1`
+    : `SELECT user_id, username, full_name, email, avatar_url, bio, location,
+              reputation_score, gender, dob, created_at
+       FROM users WHERE username = $1`;
 
+  const r = await pool.query(query, [identifier]);
   if (!r.rows[0]) throw Object.assign(new Error("User not found"), { status: 404 });
 
   const profile = r.rows[0];
-  // Normalize avatar URL
   profile.avatar_url = normalizeAvatarUrl(profile.avatar_url);
   return profile;
 };
@@ -56,7 +61,7 @@ exports.updateProfile = async (userId, payload) => {
     `, [
     full_name || current.full_name,
     email || current.email,
-    avatar_url ?? current.avatar_url,
+    avatar_url || current.avatar_url,
     bio ?? current.bio,
     location ?? current.location,
     gender ?? current.gender,
@@ -67,16 +72,21 @@ exports.updateProfile = async (userId, payload) => {
   return exports.getProfile(userId);
 };
 
-// Lấy danh sách sở thích của user
-exports.getInterests = async (userId) => {
+// Lấy danh sách sở thích của user (chấp nhận cả user_id hoặc username)
+exports.getInterests = async (identifier) => {
   const pool = await getPool();
+  
+  const isId = !isNaN(identifier) && !isNaN(parseFloat(identifier));
+  const whereClause = isId ? 'u.user_id = $1' : 'u.username = $1';
+
   const r = await pool.query(`
       SELECT i.interest_id, i.name
-      FROM user_interests ui
+      FROM users u
+      JOIN user_interests ui ON ui.user_id = u.user_id
       JOIN interests i ON i.interest_id = ui.interest_id
-      WHERE ui.user_id=$1
+      WHERE ${whereClause}
       ORDER BY i.name
-    `, [userId]);
+    `, [identifier]);
   return r.rows;
 };
 

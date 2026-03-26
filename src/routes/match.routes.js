@@ -75,7 +75,7 @@ const validateHistoryQuery = (req, res, next) => {
  */
 router.post('/join', async (req, res) => {
     try {
-        const userId = req.user.userId;
+        const userId = req.user.user_id;  // Fix: user_id not userId
         
         // TODO: Add user to queue via Socket.IO
         // For now, return a success response indicating the queue join was initiated
@@ -106,7 +106,7 @@ router.post('/join', async (req, res) => {
  */
 router.post('/cancel', async (req, res) => {
     try {
-        const userId = req.user.userId;
+        const userId = req.user.user_id;  // Fix: user_id not userId
         
         // TODO: Remove user from queue via Socket.IO
         // For now, return a success response
@@ -137,10 +137,15 @@ router.post('/cancel', async (req, res) => {
  */
 router.get('/history', validateHistoryQuery, async (req, res) => {
     try {
-        const userId = req.user.userId;
+        const userId = req.user.user_id;  // Fix: user_id not userId
         const limit = parseInt(req.query.limit) || 20;
         
+        console.log(`\n📡 [API] GET /api/match/history - userId: ${userId}, limit: ${limit}`);
+        console.log(`   req.user:`, req.user);
+        
         const history = await matchService.getMatchHistory(userId, limit);
+        
+        console.log(`   ✅ Returning ${history.length} match(es) to client`);
         
         res.status(200).json({
             success: true,
@@ -148,7 +153,7 @@ router.get('/history', validateHistoryQuery, async (req, res) => {
             data: history
         });
     } catch (error) {
-        console.error('Error getting match history:', error);
+        console.error('❌ Error getting match history:', error);
         res.status(500).json({
             success: false,
             message: 'Lỗi khi lấy lịch sử ghép đôi',
