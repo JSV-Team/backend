@@ -2,6 +2,70 @@ const { getPool } = require("../config/db");
 const bannedKeywordModel = require('../models/bannedKeyword.model');
 
 /**
+ * Lấy tất cả bài đăng (feed) - Activities và DailyStatus từ tất cả users
+ */
+exports.listAll = async (page = 1, limit = 15) => {
+  const pool = getPool();
+  const offset = (page - 1) * limit;
+  
+  const query = `
+    WITH combined_posts AS (
+      SELECT 
+        a.activity_id AS post_id, 
+        a.creator_id AS creator_id, 
+        a.title AS content, 
+        a.description AS extra_content, 
+        a.location, 
+        a.duration_minutes, 
+        a.max_participants, 
+        a.created_at,
+        (SELECT image_url FROM activity_images WHERE activity_id = a.activity_id LIMIT 1) AS image_url,
+        'activity' AS post_type
+      FROM activities a
+      WHERE a.status = 'active'
+      
+      UNION ALL
+      
+      SELECT 
+        s.status_id AS post_id, 
+        s.user_id AS creator_id, 
+        s.content, 
+        '' AS extra_content, 
+        '' AS location, 
+        NULL AS duration_minutes, 
+        NULL AS max_participants, 
+        s.created_at,
+        s.image_url,
+        'status' AS post_type
+      FROM daily_status s
+      WHERE s.expires_at > NOW()
+    )
+    SELECT 
+      cp.post_id, 
+      cp.creator_id AS user_id, 
+      cp.content, 
+      cp.extra_content, 
+      cp.location, 
+      cp.duration_minutes, 
+      cp.max_participants, 
+      cp.created_at, 
+      cp.image_url, 
+      cp.post_type,
+      u.full_name, 
+      u.avatar_url,
+      0 AS reactions_count,
+      0 AS comments_count,
+      0 AS shares_count
+    FROM combined_posts cp
+    JOIN users u ON u.user_id = cp.creator_id
+    ORDER BY cp.created_at DESC
+    LIMIT $1 OFFSET $2
+  `;
+  const r = await pool.query(query, [limit, offset]);
+  return r.rows;
+};
+
+/**
  * Lấy danh sách bài đăng của 1 user (bao gồm Activities và DailyStatus)
  */
 exports.listByUser = async (userId, page = 1, limit = 15) => {
