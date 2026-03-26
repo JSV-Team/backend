@@ -1,23 +1,74 @@
 const interestService = require('./interestService');
+const matchingService = require('./matchingService');
+const { pool } = require('../config/db');
 
 /**
  * MatchingEngine - Core matching algorithm for interest-based matching
+ * NÂNG CẤP: Tích hợp Phễu 3 Tầng (Location + Interest 70% + Numerology 30%)
  * Implements scoring logic with wait time bonus and minimum score threshold
  */
 class MatchingEngine {
   constructor(options = {}) {
     this.minScoreThreshold = options.minScoreThreshold || 0;
     this.waitTimeBonusWeight = options.waitTimeBonusWeight || 0.1;
+    this.useEnhancedMatching = options.useEnhancedMatching !== false; // Mặc định bật
   }
 
   /**
    * Calculate match score between two users
-   * Uses interestService.calculateInterestScore() and adds wait time bonus
-   * @param {Object} user1 - First user object
-   * @param {Object} user2 - Second user object
+   * NÂNG CẤP: Sử dụng matchingService với Phễu 3 Tầng
+   * @param {Object} user1 - First user object (phải có userId, location, dob)
+   * @param {Object} user2 - Second user object (phải có userId, location, dob)
    * @returns {Promise<Object>} - Match result with score and details
    */
   async calculateMatchScore(user1, user2) {
+    // Nếu bật Enhanced Matching, sử dụng Phễu 3 Tầng
+    if (this.useEnhancedMatching) {
+      console.log(`\n🚀 [MatchEngine] Using ENHANCED matching (3-Tier Funnel)`);
+      
+      // Lấy thông tin đầy đủ của user từ database nếu thiếu
+      const user1Data = await this._getUserFullData(user1);
+      const user2Data = await this._getUserFullData(user2);
+      
+      // Tính điểm theo Phễu 3 Tầng
+      const enhancedResult = await matchingService.calculateTotalMatchScore(
+        user1Data.userId,
+        user2Data.userId,
+        user1Data.dob,
+        user2Data.dob
+      );
+      
+      // Calculate wait time bonus
+      const now = new Date();
+      const user1WaitTime = (now - new Date(user1.joinedAt)) / 1000;
+      const user2WaitTime = (now - new Date(user2.joinedAt)) / 1000;
+      const maxWaitTime = Math.max(user1WaitTime, user2WaitTime);
+      const normalizedWaitTime = Math.min(maxWaitTime / 120, 1);
+      const waitTimeBonus = normalizedWaitTime * this.waitTimeBonusWeight * 100;
+      
+      // Tổng điểm = Enhanced Score + Wait Time Bonus
+      const totalScore = Math.min(enhancedResult.totalScore + waitTimeBonus, 100);
+      
+      return {
+        user1Id: user1.userId,
+        user2Id: user2.userId,
+        score: Math.round(totalScore * 100) / 100,
+        interestScore: enhancedResult.interestScore,
+        numerologyScore: enhancedResult.numerologyScore,
+        waitTimeBonus: Math.round(waitTimeBonus * 100) / 100,
+        commonInterests: enhancedResult.commonInterests,
+        lifePathNumbers: {
+          user1: enhancedResult.lifePathNum1,
+          user2: enhancedResult.lifePathNum2
+        },
+        breakdown: enhancedResult.breakdown,
+        matchingType: 'enhanced' // Đánh dấu là enhanced matching
+      };
+    }
+    
+    // ===== LOGIC CŨ (Fallback) =====
+    console.log(`\n📊 [MatchEngine] Using LEGACY matching (Interest only)`);
+    
     // Use interestService to calculate base interest score
     const interestScore = await interestService.calculateInterestScore(
       user1.userId,
@@ -34,6 +85,7 @@ class MatchingEngine {
         waitTimeBonus: 0,
         commonInterests: [],
         totalUniqueInterests: 0,
+        matchingType: 'legacy'
       };
     }
 
@@ -72,6 +124,35 @@ class MatchingEngine {
       waitTimeBonus: Math.round(waitTimeBonus * 100) / 100,
       commonInterests,
       totalUniqueInterests: allInterests.size,
+      matchingType: 'legacy'
+    };
+  }
+  
+  /**
+   * Helper: Lấy thông tin đầy đủ của user từ database
+   * @private
+   */
+  async _getUserFullData(user) {
+    // Nếu đã có đủ thông tin, return luôn
+    if (user.dob && user.location) {
+      return user;
+    }
+    
+    // Query database để lấy thông tin đầy đủ
+    const result = await pool.query(
+      'SELECT user_id, username, location, dob FROM users WHERE user_id = $1',
+      [user.userId]
+    );
+    
+    if (result.rows.length === 0) {
+      throw new Error(`User ${user.userId} not found in database`);
+    }
+    
+    return {
+      ...user,
+      userId: result.rows[0].user_id,
+      location: result.rows[0].location,
+      dob: result.rows[0].dob
     };
   }
 

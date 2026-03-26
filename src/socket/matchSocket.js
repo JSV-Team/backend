@@ -13,15 +13,24 @@ const queueService = require('../services/queueService');
  */
 function setupMatchSocket(io, socket) {
     console.log(`🎮 Setting up match handlers for user: ${socket.userId}`);
+    console.log(`🔍 Socket ID: ${socket.id}`);
+    console.log(`🔍 Socket authenticated: ${!!socket.userId}`);
     
     // Store user connection
     if (socket.userId) {
         onlineUsers.set(socket.userId, socket.id);
+        console.log(`✅ User ${socket.userId} stored in onlineUsers map`);
+    } else {
+        console.log(`⚠️ WARNING: socket.userId is undefined!`);
     }
 
     // Handle match:join event
     socket.on('match:join', async (data, callback) => {
-            console.log('📨 Received match:join event from socket:', socket.id, 'userId:', socket.userId);
+            console.log('📨 ========== MATCH:JOIN EVENT RECEIVED ==========');
+            console.log('📨 Socket ID:', socket.id);
+            console.log('📨 User ID:', socket.userId);
+            console.log('📨 Data:', data);
+            console.log('📨 Callback type:', typeof callback);
             
             const userId = socket.userId;
             
