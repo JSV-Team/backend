@@ -17,7 +17,7 @@ const matchQueue = new MatchQueue();
 async function validateUser(userId) {
   // Check if user exists and is not banned
   const userInfo = await matchService.getUserInfo(userId);
-  
+
   if (!userInfo) {
     return {
       valid: false,
@@ -30,7 +30,7 @@ async function validateUser(userId) {
   // The getUserInfo query already filters by status = 'active'
   // If userInfo is null, it means user is not active (banned/inactive)
   // Note: We need to check the actual status field from users table
-  
+
   // Get user status from database
   const { getPool } = require('../config/db');
   const pool = getPool();
@@ -38,7 +38,7 @@ async function validateUser(userId) {
     'SELECT status FROM users WHERE user_id = $1',
     [userId]
   );
-  
+
   if (statusQuery.rows.length === 0) {
     return {
       valid: false,
@@ -46,7 +46,7 @@ async function validateUser(userId) {
       errorCode: 'USER_NOT_FOUND'
     };
   }
-  
+
   const userStatus = statusQuery.rows[0].status;
   if (userStatus !== 'active') {
     return {
@@ -91,10 +91,19 @@ async function joinQueue(userId, userInfo = {}) {
 
     // Check if user is already in queue
     if (matchQueue.hasUser(userId)) {
+      console.log(`🔄 User ${userId} is already in queue. Updating socket ID for reconnection.`);
+      matchQueue.updateSocketId(userId, userInfo.socketId);
+      
+      const queueSize = matchQueue.getSize();
+      const estimatedWaitTime = Math.max(30, queueSize * 15);
+
       return {
-        success: false,
-        error: 'Bạn đang trong hàng đợi',
-        errorCode: 'ALREADY_IN_QUEUE'
+        success: true,
+        data: {
+          queueSize,
+          estimatedWaitTime,
+          message: 'Bạn đã kết nối lại hàng đợi'
+        }
       };
     }
 
@@ -110,7 +119,7 @@ async function joinQueue(userId, userInfo = {}) {
 
     // Get user interests
     const interests = await interestService.getUserInterests(userId);
-    
+
     // Get full user info for match notification
     const fullUserInfo = await matchService.getUserInfo(userId);
     console.log(`📸 User ${userId} info from database:`, fullUserInfo);
@@ -131,7 +140,7 @@ async function joinQueue(userId, userInfo = {}) {
         bio: fullUserInfo.bio
       }
     };
-    
+
     console.log(`📦 Queue entry created for user ${userId}:`, {
       userId: queueEntry.userId,
       avatar_url: queueEntry.userInfo.avatar_url,
@@ -140,7 +149,7 @@ async function joinQueue(userId, userInfo = {}) {
 
     // Add to queue
     const added = matchQueue.addUser(queueEntry);
-    
+
     if (!added) {
       return {
         success: false,
@@ -189,7 +198,7 @@ function cancelQueue(userId) {
 
     // Remove from queue
     const removed = matchQueue.removeUser(userId);
-    
+
     if (!removed) {
       return {
         success: false,
@@ -220,7 +229,7 @@ function getQueueInfo() {
   try {
     const users = matchQueue.getUsers();
     const now = Date.now();
-    
+
     // Calculate wait time for each user
     const usersWithWaitTime = users.map(user => ({
       userId: user.userId,
@@ -256,19 +265,19 @@ function getQueueInfo() {
  */
 function handleTimeout(io) {
   const timedOutUsers = [];
-  
+
   try {
     const users = matchQueue.getUsers();
     const now = Date.now();
-    
+
     for (const user of users) {
       const waitTime = Math.floor((now - new Date(user.joinedAt).getTime()) / 1000);
-      
+
       if (waitTime >= QUEUE_TIMEOUT) {
         // Remove user from queue
         matchQueue.removeUser(user.userId);
         timedOutUsers.push(user.userId);
-        
+
         // Emit timeout event to user if socket provided
         if (io && user.socketId) {
           io.to(user.socketId).emit('match:timeout', {
@@ -276,11 +285,11 @@ function handleTimeout(io) {
             suggestion: 'Hãy thử mở rộng sở thích của bạn để tìm thấy người phù hợp hơn'
           });
         }
-        
+
         console.log(`User ${user.userId} timed out after ${waitTime} seconds`);
       }
     }
-    
+
     return timedOutUsers;
   } catch (error) {
     console.error('Error in handleTimeout:', error);

@@ -9,8 +9,11 @@ const getPendingApprovals = async (userId) => {
     return await activityModel.getRequestsToApprove(userId);
 };
 
-const deleteActivityRequest = async (requestId) => {
-    await activityModel.deleteActivityRequest(requestId);
+const deleteActivityRequest = async (requestId, userId) => {
+    const success = await activityModel.deleteActivityRequest(requestId, userId);
+    if (!success) {
+        throw new Error('Yêu cầu không tồn tại hoặc bạn không có quyền hủy yêu cầu này');
+    }
 };
 
 const getApprovedActivities = async (page = 1, limit = 15) => {
@@ -49,10 +52,10 @@ const joinActivity = async (activityId, userId) => {
 };
 
 // Gọi khi host bấm Accept Request
-const approveActivityRequest = async (requestId) => {
-    const requestData = await activityModel.approveActivityRequest(requestId);
+const approveActivityRequest = async (requestId, userId) => {
+    const requestData = await activityModel.approveActivityRequest(requestId, userId);
     if (!requestData) {
-        throw new Error('Không tìm thấy yêu cầu hoặc yêu cầu đã được xử lý');
+        throw new Error('Không tìm thấy yêu cầu hoặc bạn không có quyền xử lý yêu cầu này');
     }
 
     // Tự động tạo nhóm chat và thêm member
@@ -95,11 +98,11 @@ const deleteActivity = async (activityId, userId) => {
     return result;
 };
 
-const rejectActivityRequest = async (requestId) => {
+const rejectActivityRequest = async (requestId, userId) => {
     if (!requestId) throw new Error('Yêu cầu không hợp lệ');
-    const requestData = await activityModel.rejectActivityRequest(requestId);
+    const requestData = await activityModel.rejectActivityRequest(requestId, userId);
     if (!requestData) {
-        throw new Error('Yêu cầu không tồn tại hoặc đã được xử lý');
+        throw new Error('Yêu cầu không tồn tại hoặc bạn không có quyền xử lý yêu cầu này');
     }
     return requestData;
 };

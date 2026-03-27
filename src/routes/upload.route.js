@@ -4,6 +4,7 @@ const path = require('path');
 const fs = require('fs');
 const { verifyToken } = require('../middlewares/auth.middleware');
 const { upload, validateFileContent, handleUploadError, getFileInfo } = require('../middlewares/upload');
+const storageService = require('../services/storage.service');
 
 // All upload routes require authentication
 router.use(verifyToken);
@@ -31,21 +32,32 @@ router.post("/avatar", async (req, res, next) => {
         });
       });
 
-      const fileInfo = getFileInfo(req.file);
+      // Upload to Supabase Storage
+      const publicUrl = await storageService.uploadFile(
+        req.file.buffer,
+        req.file.originalname,
+        req.file.mimetype
+      );
+
+      const fileInfo = getFileInfo(req.file, publicUrl);
       
       // Update user avatar in database
       const { getPool } = require('../config/db');
       const pool = getPool();
       const userId = req.user.user_id;
       
+      // Optional: Delete old avatar from storage if it was a Supabase URL
+      const oldUser = await pool.query('SELECT avatar_url FROM users WHERE user_id = $1', [userId]);
+      if (oldUser.rows[0]?.avatar_url && oldUser.rows[0].avatar_url.includes('supabase.co')) {
+        await storageService.deleteFileByUrl(oldUser.rows[0].avatar_url);
+      }
+      
       await pool.query(
         'UPDATE users SET avatar_url = $1 WHERE user_id = $2',
-        [fileInfo.url, userId]
+        [publicUrl, userId]
       );
       
-      console.log(`✅ Avatar uploaded successfully: ${req.file.filename}`);
-      console.log(`   Relative URL: ${fileInfo.url}`);
-      console.log(`   Updated user ${userId} avatar`);
+      console.log(`✅ Avatar uploaded to Supabase successfully: ${userId}`);
       
       res.json({ 
         success: true,
@@ -90,25 +102,31 @@ router.post("/post-media", (req, res, next) => {
         req.file = file; // Set current file for validation
         
         try {
+          // Validate file content in memory
           await new Promise((resolve, reject) => {
             validateFileContent(req, res, (err) => {
-              if (err) {
-                validationErrors.push(`File ${file.originalname}: ${err.message || 'Không hợp lệ'}`);
-              } else {
-                validatedFiles.push(getFileInfo(file));
-              }
-              resolve();
+              if (err) reject(err);
+              else resolve();
             });
           });
+
+          // Upload to Supabase Storage
+          const publicUrl = await storageService.uploadFile(
+            file.buffer,
+            file.originalname,
+            file.mimetype
+          );
+
+          validatedFiles.push(getFileInfo(file, publicUrl));
         } catch (error) {
-          validationErrors.push(`File ${file.originalname}: Lỗi validation`);
+          validationErrors.push(`File ${file.originalname}: ${error.message || 'Lỗi upload'}`);
         }
       }
       
       if (validationErrors.length > 0) {
         return res.status(400).json({
           success: false,
-          message: 'Một số file không hợp lệ',
+          message: 'Một số file không hợp lệ hoặc lỗi upload',
           errors: validationErrors
         });
       }
@@ -141,15 +159,25 @@ router.post('/image', (req, res, next) => {
       });
     }
 
-    // Skip validation temporarily and return success
-    const fileInfo = getFileInfo(req.file);
-    
-    console.log(`✅ Image uploaded successfully: ${req.file.filename}`);
-    
-    res.json({
-      success: true,
-      message: 'Upload ảnh thành công',
-      data: fileInfo
+    // Upload to Supabase Storage
+    storageService.uploadFile(
+      req.file.buffer,
+      req.file.originalname,
+      req.file.mimetype
+    ).then(publicUrl => {
+      const fileInfo = getFileInfo(req.file, publicUrl);
+      console.log(`✅ Image uploaded to Supabase successfully`);
+      res.json({
+        success: true,
+        message: 'Upload ảnh thành công',
+        data: fileInfo
+      });
+    }).catch(error => {
+      console.error('Image upload error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Lỗi khi upload ảnh lên kho lưu trữ'
+      });
     });
   });
 });

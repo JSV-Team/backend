@@ -62,10 +62,6 @@ class MatchingEngine {
         distance: enhancedResult.distance,
         waitTimeBonus: Math.round(waitTimeBonus * 100) / 100,
         commonInterests: enhancedResult.commonInterests,
-        lifePathNumbers: {
-          user1: enhancedResult.lifePathNum1,
-          user2: enhancedResult.lifePathNum2
-        },
         breakdown: enhancedResult.breakdown,
         matchingType: 'enhanced' // Đánh dấu là enhanced matching
       };

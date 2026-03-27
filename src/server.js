@@ -40,7 +40,7 @@ const startServer = async () => {
         ALTER TABLE activities ADD CONSTRAINT chk_activities_status CHECK (status IN ('active', 'deleted', 'profile'));
         
         ALTER TABLE match_sessions DROP CONSTRAINT IF EXISTS chk_match_type;
-        ALTER TABLE match_sessions ADD CONSTRAINT chk_match_type CHECK (match_type IN ('random', 'selective', 'interest'));
+        ALTER TABLE match_sessions ADD CONSTRAINT chk_match_type CHECK (match_type IN ('random', 'selective', 'interest', 'distance', 'enhanced'));
       `);
       console.log('✅ DB Constraints & Columns auto-patched for new features');
       

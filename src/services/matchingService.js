@@ -4,7 +4,7 @@ const numerologyService = require('./numerologyService');
 const { calculateDistance } = require('../utils/distanceCalculator');
 
 /**
- * MatchingService - Service nâng cấp với Phễu 3 Tầng
+ * MatchingService - Service nâng cấp với Phễu 4 Tầng
  * Tầng 0: Lọc an toàn (SQL)
  * Tầng 1: Khoảng cách địa lý (Priority Criterion - không lọc cứng)
  * Tầng 2: Điểm sở thích (70%)
@@ -71,39 +71,51 @@ async function calculateTotalMatchScore(userId1, userId2, dob1, dob2, lat1, lon1
   console.log(`\n🧮 [MatchingService] Calculating total match score`);
   console.log(`   User ${userId1} <-> User ${userId2}`);
   
-  // ===== TẦNG 2: ĐIỂM SỞ THÍCH (70%) =====
-  console.log(`\n   📊 TẦNG 2: Calculating Interest Score (max 70 points)`);
+  // =====  // 1. Tính điểm khoảng cách (40 điểm)
+  console.log(`\n   📍 TẦNG 1: Calculating Distance Score (max 40 points)`);
+  const distance = locationUtils.calculateDistance(lat1, lon1, lat2, lon2);
+  const rawDistanceScore = locationUtils.calculateDistanceScoreWithFallback(distance, loc1, loc2);
+  const distanceScore = (rawDistanceScore / 100) * 40;
+  
+  if (distance !== Infinity) {
+    console.log(`   📏 Distance: ${distance.toFixed(2)} km`);
+  } else {
+    console.log(`   ⚠️ Coordinates missing, using location string matching`);
+  }
+  console.log(`   📈 Distance Score: ${distanceScore.toFixed(2)}/40 (raw: ${rawDistanceScore}%)`);
+  
+  // ===== TẦNG 2: ĐIỂM SỞ THÍCH (40%) =====
+  console.log(`\n   📊 TẦNG 2: Calculating Interest Score (max 40 points)`);
   
   // Sử dụng logic cũ từ interestService
   const rawInterestScore = await interestService.calculateInterestScore(userId1, userId2);
   
-  // Quy đổi về thang điểm 70
-  const interestScore = (rawInterestScore / 100) * 70;
-  console.log(`   📈 Interest Score: ${interestScore.toFixed(2)}/70 (raw: ${rawInterestScore.toFixed(2)}%)`);
+  // Quy đổi về thang điểm 40
+  const interestScore = (rawInterestScore / 100) * 40;
+  console.log(`   📈 Interest Score: ${interestScore.toFixed(2)}/40 (raw: ${rawInterestScore.toFixed(2)}%)`);
   
   // Lấy sở thích chung để hiển thị
   const commonInterests = await interestService.getCommonInterests(userId1, userId2);
   
-  // ===== TẦNG 3: ĐIỂM THẦN SỐ HỌC (30%) =====
-  console.log(`\n   🔮 TẦNG 3: Calculating Numerology Score (max 30 points)`);
+  // ===== TẦNG 3: ĐIỂM THẦN SỐ HỌC (20%) =====
+  console.log(`\n   🔮 TẦNG 3: Calculating Numerology Score (max 20 points)`);
   
   // Tính Life Path Number cho cả 2 user
-  console.log(`   User ${userId1}:`);
   const lifePathNum1 = numerologyService.getLifePathNumber(dob1);
-  
-  console.log(`   User ${userId2}:`);
   const lifePathNum2 = numerologyService.getLifePathNumber(dob2);
   
   // Tính điểm thần số học
-  const numerologyScore = numerologyService.calculateNumerologyScore(lifePathNum1, lifePathNum2);
-  console.log(`   🌟 Numerology Score: ${numerologyScore}/30`);
+  const rawNumerologyScore = numerologyService.calculateNumerologyScore(lifePathNum1, lifePathNum2);
+  // Quy đổi về thang điểm 20 (original is 30)
+  const numerologyScore = (rawNumerologyScore / 30) * 20;
+  console.log(`   🌟 Numerology Score: ${numerologyScore.toFixed(2)}/20 (raw: ${rawNumerologyScore}/30)`);
   
   // ===== TÍNH KHOẢNG CÁCH ĐỊA LÝ =====
   const distance = calculateDistance(lat1, lon1, lat2, lon2);
   console.log(`\n   📍 Distance: ${distance !== null ? distance + ' km' : 'Unknown'}`);
   
   // ===== TỔNG KẾT =====
-  const totalScore = interestScore + numerologyScore;
+  const totalScore = distanceScore + interestScore + numerologyScore;
   
   console.log(`\n   🎯 TOTAL MATCH SCORE: ${totalScore.toFixed(2)}/100`);
   console.log(`      - Interest (70%): ${interestScore.toFixed(2)}`);
@@ -122,9 +134,14 @@ async function calculateTotalMatchScore(userId1, userId2, dob1, dob2, lat1, lon1
     lifePathNum2,
     commonInterests,
     breakdown: {
+      distance: {
+        score: Math.round(distanceScore * 100) / 100,
+        weight: '40%',
+        km: distance.toFixed(2)
+      },
       interest: {
         score: Math.round(interestScore * 100) / 100,
-        weight: '70%',
+        weight: '40%',
         rawScore: Math.round(rawInterestScore * 100) / 100
       },
       numerology: {

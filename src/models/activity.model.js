@@ -45,10 +45,19 @@ const getRequestsToApprove = async (userId) => {
   return result.rows;
 };
 
-const deleteActivityRequest = async (requestId) => {
+const deleteActivityRequest = async (requestId, userId) => {
   const pool = getPool();
-  const query = `DELETE FROM activity_requests WHERE request_id = $1`;
-  await pool.query(query, [requestId]);
+  const query = `
+    DELETE FROM activity_requests 
+    WHERE request_id = $1 
+    AND (
+      requester_id = $2 
+      OR activity_id IN (SELECT activity_id FROM activities WHERE creator_id = $2)
+    )
+    RETURNING request_id;
+  `;
+  const result = await pool.query(query, [requestId, userId]);
+  return result.rowCount > 0;
 };
 
 const getApprovedActivities = async (page = 1, limit = 15) => {
@@ -120,15 +129,19 @@ const createActivityRequest = async (activityId, userId) => {
   return result.rows[0].request_id;
 };
 
-const approveActivityRequest = async (requestId) => {
+const approveActivityRequest = async (requestId, userId) => {
   const pool = getPool();
   const query = `
-    UPDATE activity_requests 
-    SET status = 'accepted' 
-    WHERE request_id = $1 AND status = 'pending'
-    RETURNING activity_id, requester_id
+    UPDATE activity_requests ar
+    SET status = 'accepted'
+    FROM activities a
+    WHERE ar.activity_id = a.activity_id
+      AND ar.request_id = $1 
+      AND ar.status = 'pending'
+      AND a.creator_id = $2
+    RETURNING ar.activity_id, ar.requester_id
   `;
-  const result = await pool.query(query, [requestId]);
+  const result = await pool.query(query, [requestId, userId]);
   return result.rows[0];
 };
 
@@ -144,15 +157,19 @@ const deleteActivity = async (activityId, userId) => {
   return result.rows[0];
 };
 
-const rejectActivityRequest = async (requestId) => {
+const rejectActivityRequest = async (requestId, userId) => {
   const pool = getPool();
   const query = `
-    UPDATE activity_requests 
+    UPDATE activity_requests ar
     SET status = 'rejected' 
-    WHERE request_id = $1 AND status = 'pending'
-    RETURNING activity_id, requester_id
+    FROM activities a
+    WHERE ar.activity_id = a.activity_id
+      AND ar.request_id = $1 
+      AND ar.status = 'pending'
+      AND a.creator_id = $2
+    RETURNING ar.activity_id, ar.requester_id
   `;
-  const result = await pool.query(query, [requestId]);
+  const result = await pool.query(query, [requestId, userId]);
   return result.rows[0];
 };
 

@@ -214,9 +214,27 @@ const getUserInfo = async (userId) => {
     return result.rows[0] || null;
 };
 
+/**
+ * Check if an active match session exists between two users
+ * @param {number} userOne - First user ID
+ * @param {number} userTwo - Second user ID
+ * @returns {Promise<boolean>} True if active match exists
+ */
+const checkMatchExists = async (userOne, userTwo) => {
+    const sortedUsers = [userOne, userTwo].sort((a, b) => a - b);
+    const pool = getPool();
+    const query = `
+        SELECT 1 FROM match_sessions
+        WHERE user_one = $1 AND user_two = $2 AND status = 'active';
+    `;
+    const result = await pool.query(query, [sortedUsers[0], sortedUsers[1]]);
+    return result.rows.length > 0;
+};
+
 module.exports = {
     createMatchSession,
     createConversation,
     getMatchHistory,
-    getUserInfo
+    getUserInfo,
+    checkMatchExists
 };
