@@ -41,6 +41,10 @@ const startServer = async () => {
         
         ALTER TABLE match_sessions DROP CONSTRAINT IF EXISTS chk_match_type;
         ALTER TABLE match_sessions ADD CONSTRAINT chk_match_type CHECK (match_type IN ('random', 'selective', 'interest', 'distance', 'enhanced'));
+
+        -- Patch for geolocation features
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS latitude DOUBLE PRECISION NULL;
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS longitude DOUBLE PRECISION NULL;
       `);
       console.log('✅ DB Constraints & Columns auto-patched for new features');
 
