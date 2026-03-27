@@ -40,13 +40,10 @@ const startServer = async () => {
         ALTER TABLE activities ADD CONSTRAINT chk_activities_status CHECK (status IN ('active', 'deleted', 'profile'));
         
         ALTER TABLE match_sessions DROP CONSTRAINT IF EXISTS chk_match_type;
-        ALTER TABLE match_sessions ADD CONSTRAINT chk_match_type CHECK (match_type IN ('random', 'selective', 'interest'));
-        
-        -- Add match_score to match_sessions if missing
-        ALTER TABLE match_sessions ADD COLUMN IF NOT EXISTS match_score INT DEFAULT 0;
+        ALTER TABLE match_sessions ADD CONSTRAINT chk_match_type CHECK (match_type IN ('random', 'selective', 'interest', 'distance', 'enhanced'));
       `);
       console.log('✅ DB Constraints & Columns auto-patched for new features');
-      
+
       // Fix avatar URLs - remove local domain
       const fixResult = await pool.query(`
         UPDATE users 
@@ -66,7 +63,7 @@ const startServer = async () => {
       console.log(`✅ Server is running on http://localhost:${PORT}`);
       console.log(`✅ API available at http://localhost:${PORT}/api`);
       console.log(`✅ Socket.IO is ready`);
-      
+
       // Start the matching engine loop
       startMatchingEngine(io);
     });

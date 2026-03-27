@@ -91,10 +91,19 @@ async function joinQueue(userId, userInfo = {}) {
 
     // Check if user is already in queue
     if (matchQueue.hasUser(userId)) {
+      console.log(`🔄 User ${userId} is already in queue. Updating socket ID for reconnection.`);
+      matchQueue.updateSocketId(userId, userInfo.socketId);
+      
+      const queueSize = matchQueue.getSize();
+      const estimatedWaitTime = Math.max(30, queueSize * 15);
+
       return {
-        success: false,
-        error: 'Bạn đang trong hàng đợi',
-        errorCode: 'ALREADY_IN_QUEUE'
+        success: true,
+        data: {
+          queueSize,
+          estimatedWaitTime,
+          message: 'Bạn đã kết nối lại hàng đợi'
+        }
       };
     }
 

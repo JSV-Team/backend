@@ -85,6 +85,23 @@ class MatchQueue {
   }
 
   /**
+   * Update socket ID for a user in the queue
+   * Useful for reconnection scenarios
+   * @param {string} userId - User ID
+   * @param {string} socketId - New socket ID
+   * @returns {boolean} - True if updated, false if not found
+   */
+  updateSocketId(userId, socketId) {
+    const user = this.queue.get(userId);
+    if (!user) {
+      return false;
+    }
+    user.socketId = socketId;
+    this.queue.set(userId, user);
+    return true;
+  }
+
+  /**
    * Get user information from the queue
    * @param {string} userId - The user ID to retrieve
    * @returns {Object|null} - User object or null if not found

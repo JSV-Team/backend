@@ -9,19 +9,8 @@ if (!fs.existsSync(uploadDir)) {
     fs.mkdirSync(uploadDir, { recursive: true });
 }
 
-// Cấu hình storage
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, uploadDir);
-    },
-    filename: (req, file, cb) => {
-        // Tên file an toàn: timestamp + random + ext chuẩn hóa
-        const ext = path.extname(file.originalname).toLowerCase();
-        const randomSuffix = Math.random().toString(36).substring(2, 10);
-        const timestamp = Date.now();
-        cb(null, `img-${timestamp}-${randomSuffix}${ext}`);
-    }
-});
+// Cấu hình storage dùng Memory (để sau đó đẩy lên Supabase)
+const storage = multer.memoryStorage();
 
 // Danh sách MIME types và extensions được phép (chuẩn app thực tế)
 const ALLOWED_IMAGE_TYPES = {
@@ -97,12 +86,10 @@ const validateFileContent = async (req, res, next) => {
     }
     
     try {
-        const filePath = req.file.path;
-        const fileStats = fs.statSync(filePath);
+        const fileSize = req.file.size || req.file.buffer.length;
         
-        // Kiểm tra file có tồn tại và có kích thước
-        if (fileStats.size === 0) {
-            fs.unlinkSync(filePath);
+        // Kiểm tra file có kích thước
+        if (fileSize === 0) {
             const error = new Error('File rỗng hoặc bị lỗi');
             if (typeof next === 'function') return next(error);
             return res.status(400).json({
@@ -111,19 +98,14 @@ const validateFileContent = async (req, res, next) => {
             });
         }
         
-        // TEMPORARY: Skip magic bytes validation to fix chat upload
-        // The file-type package might have issues on Render
-        console.log(`✅ File uploaded: ${req.file.filename} (${Math.round(fileStats.size / 1024)}KB)`);
-        req.file.actualSize = fileStats.size;
+        console.log(`✅ File received in memory: ${req.file.originalname} (${Math.round(fileSize / 1024)}KB)`);
+        req.file.actualSize = fileSize;
         
         // Call next as callback if provided
         if (typeof next === 'function') next();
         
     } catch (error) {
         console.error('File validation error:', error);
-        if (req.file && req.file.path && fs.existsSync(req.file.path)) {
-            fs.unlinkSync(req.file.path);
-        }
         if (typeof next === 'function') {
             return next(error);
         }
@@ -178,16 +160,16 @@ const handleUploadError = (error, req, res, next) => {
 };
 
 // Utility function để lấy thông tin file
-const getFileInfo = (file) => {
+const getFileInfo = (file, publicUrl = null) => {
     if (!file) return null;
     
     return {
-        filename: file.filename,
+        filename: file.filename || file.originalname,
         originalName: file.originalname,
-        size: file.size,
-        sizeKB: Math.round(file.size / 1024),
-        type: file.validatedType || path.extname(file.filename).substring(1),
-        url: `/uploads/${file.filename}`,
+        size: file.size || (file.buffer ? file.buffer.length : 0),
+        sizeKB: Math.round((file.size || (file.buffer ? file.buffer.length : 0)) / 1024),
+        type: file.validatedType || path.extname(file.filename || file.originalname).substring(1),
+        url: publicUrl || `/uploads/${file.filename}`,
         uploadedAt: new Date().toISOString()
     };
 };
