@@ -1,0 +1,119 @@
+﻿[dotenv@17.3.1] injecting env (5) from .env -- tip: ΓÜÖ∩╕Å  enable debug logging with { debug: true }
+[DEBUG DB CONFIG]
+DB_USER provided: No
+DB_HOST provided: No
+DATABASE_URL provided: Yes
+≡ƒº¬ Starting Distance Matching Test...
+
+--- 0. Debugging Schema ---
+Available columns in "users" table: user_id, username, email, email_verified, password_hash, full_name, avatar_url, bio, location, reputation_score, status, ban_until, is_locked, role, gender, dob, created_at, latitude, longitude, instance_id, id, aud, role, email, encrypted_password, email_confirmed_at, invited_at, confirmation_token, confirmation_sent_at, recovery_token, recovery_sent_at, email_change_token_new, email_change, email_change_sent_at, last_sign_in_at, raw_app_meta_data, raw_user_meta_data, is_super_admin, created_at, updated_at, phone, phone_confirmed_at, phone_change, phone_change_token, phone_change_sent_at, confirmed_at, email_change_token_current, email_change_confirm_status, banned_until, reauthentication_token, reauthentication_sent_at, is_sso_user, deleted_at, is_anonymous
+User A: TestUserA (Hanoi) at (21.0285, 105.8542)
+User B: TestUserB (Hanoi Nearby) at (21.05, 105.88)
+User C: TestUserC (HCMC) at (10.7626, 106.6602)
+
+--- 2. Testing Distance Calculation ---
+Distance A-B: 3.59 km
+Distance A-C: 1144.75 km
+
+--- 3. Testing Match Scores ---
+
+>>> Match A <-> B (Nearby) <<<
+
+≡ƒÜÇ [MatchEngine] Using ENHANCED matching (3-Tier Funnel)
+
+≡ƒº« [MatchingService] Calculating total match score
+   User 9991 <-> User 9992
+
+   ≡ƒôì Tß║ªNG 1: Calculating Distance Score (max 40 points)
+   ≡ƒôÅ Distance: 3.59 km
+   ≡ƒôê Distance Score: 38.40/40 (raw: 96%)
+
+   ≡ƒôè Tß║ªNG 2: Calculating Interest Score (max 40 points)
+      ≡ƒöó Calculating interest score: User 9991 vs User 9992
+≡ƒôî getUserInterests(9991): Found 0 interests
+ΓÜá∩╕Å User 9991 has NO interests in database
+         User 9991 interests: []
+≡ƒôî getUserInterests(9992): Found 0 interests
+ΓÜá∩╕Å User 9992 has NO interests in database
+         User 9992 interests: []
+         Common interests: 0
+         Total unique interests: 0
+         ΓÜá∩╕Å  Both users have 0 interests - score: 0
+   ≡ƒôê Interest Score: 0.00/40 (raw: 0.00%)
+
+   ≡ƒö« Tß║ªNG 3: Calculating Numerology Score (max 20 points)
+   ≡ƒôà DOB: 1990-01-01
+   ≡ƒöó Initial sum: 21 (from 19900101)
+   ≡ƒöä Reducing: 3
+   Γ£¿ Life Path Number: 3
+   ≡ƒôà DOB: 1992-05-15
+   ≡ƒöó Initial sum: 32 (from 19920515)
+   ≡ƒöä Reducing: 5
+   Γ£¿ Life Path Number: 5
+   ≡ƒö« Calculating numerology score: 3 vs 5
+   Γ£à Same parity (both odd): 30 points
+   ≡ƒîƒ Numerology Score: 20.00/20 (raw: 30/30)
+
+   ≡ƒÄ» TOTAL MATCH SCORE: 58.40/100
+      - Distance (40%): 38.40
+      - Interest (40%): 0.00
+      - Numerology (20%): 20.00
+      - Common interests: 0
+    Distance: 3.59 km, Score: 38.4
+    Interest Score: 0
+    Numerology Score: 20
+    Total: 58.41
+
+>>> Match A <-> C (Distant) <<<
+
+≡ƒÜÇ [MatchEngine] Using ENHANCED matching (3-Tier Funnel)
+
+≡ƒº« [MatchingService] Calculating total match score
+   User 9991 <-> User 9993
+
+   ≡ƒôì Tß║ªNG 1: Calculating Distance Score (max 40 points)
+   ≡ƒôÅ Distance: 1144.75 km
+   ≡ƒôê Distance Score: 0.00/40 (raw: 0%)
+
+   ≡ƒôè Tß║ªNG 2: Calculating Interest Score (max 40 points)
+      ≡ƒöó Calculating interest score: User 9991 vs User 9993
+≡ƒôî getUserInterests(9991): Found 0 interests
+ΓÜá∩╕Å User 9991 has NO interests in database
+         User 9991 interests: []
+≡ƒôî getUserInterests(9993): Found 0 interests
+ΓÜá∩╕Å User 9993 has NO interests in database
+         User 9993 interests: []
+         Common interests: 0
+         Total unique interests: 0
+         ΓÜá∩╕Å  Both users have 0 interests - score: 0
+   ≡ƒôê Interest Score: 0.00/40 (raw: 0.00%)
+
+   ≡ƒö« Tß║ªNG 3: Calculating Numerology Score (max 20 points)
+   ≡ƒôà DOB: 1990-01-01
+   ≡ƒöó Initial sum: 21 (from 19900101)
+   ≡ƒöä Reducing: 3
+   Γ£¿ Life Path Number: 3
+   ≡ƒôà DOB: 1988-10-20
+   ≡ƒöó Initial sum: 29 (from 19881020)
+   ≡ƒöä Reducing: 11
+   ≡ƒöä Reducing: 2
+   Γ£¿ Life Path Number: 2
+   ≡ƒö« Calculating numerology score: 3 vs 2
+   ΓÜí Different parity: 15 points
+   ≡ƒîƒ Numerology Score: 10.00/20 (raw: 15/30)
+
+   ≡ƒÄ» TOTAL MATCH SCORE: 10.00/100
+      - Distance (40%): 0.00
+      - Interest (40%): 0.00
+      - Numerology (20%): 10.00
+      - Common interests: 0
+    Distance: 1144.75 km, Score: 0
+    Interest Score: 0
+    Numerology Score: 10
+    Total: 10.03
+
+--- 4. Summary Results ---
+A-B Total Score: 58.41
+A-C Total Score: 10.03
+
+Γ£à SUCCESS: Nearby user has a higher score!
