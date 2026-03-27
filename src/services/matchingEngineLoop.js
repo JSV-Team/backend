@@ -110,16 +110,23 @@ async function runMatchingCycle() {
       return alreadyMatchedSet.has(`${u1}-${u2}`);
     };
 
-    // Chuẩn bị dữ liệu cho matching
+    // Merge queue info with DB info
     const usersForMatching = users.map(u => {
-      const info = usersInfoMap.get(parseInt(u.userId));
-      if (!info) return null;
+      const info = usersInfoMap.get(Number(u.userId));
+      if (!info) {
+        console.log(`⚠️  User ${u.userId} in queue but not found in DB info map`);
+        return null;
+      }
+      
       return {
         ...u,
-        ...info,
+        location: info.location,
+        latitude: info.latitude,
+        longitude: info.longitude,
+        dob: info.dob,
+        username: info.username,
         user_id: info.user_id,
-        userId: info.user_id, // Ensure both are present
-        joinedAt: u.joinedAt || new Date().toISOString()
+        userId: info.user_id // Ensure consistency
       };
     }).filter(Boolean);
 
@@ -129,14 +136,16 @@ async function runMatchingCycle() {
     });
 
     if (usersForMatching.length < 2) {
-      console.log(`⏭️  Skipping matching - not enough users with valid DB info (need 2, have ${usersForMatching.length})`);
+      console.log(`⏭️  Skipping matching - not enough valid users (need 2, have ${usersForMatching.length})`);
       return;
     }
 
     // ===== BƯỚC 2: TÌM MATCH TRÊN TOÀN BỘ QUEUE (ƯU TIÊN KHOẢNG CÁCH) =====
     console.log(`\n🔍 Finding best match among all ${usersForMatching.length} users in queue...`);
+    
+    let bestPair = null;
+    let highestScore = -1;
 
-    const validPairs = [];
     for (let i = 0; i < usersForMatching.length; i++) {
       for (let j = i + 1; j < usersForMatching.length; j++) {
         const user1 = usersForMatching[i];
@@ -147,7 +156,6 @@ async function runMatchingCycle() {
           continue;
         }
 
-        validPairs.push([user1, user2]);
       }
     }
 
