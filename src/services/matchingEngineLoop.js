@@ -208,7 +208,7 @@ async function runMatchingCycle() {
     }
 
     const validScore = Math.max(0, Math.round(bestMatch.score || 0));
-    const matchSession = await matchService.createMatchSession(user1Id, user2Id, 'distance', validScore);
+    const matchSession = await matchService.createMatchSession(user1Id, user2Id, bestMatch.matchingType || 'enhanced', validScore);
     const conversationId = await matchService.createConversation(user1Id, user2Id);
 
     // Remove from queue
