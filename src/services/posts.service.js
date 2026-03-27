@@ -52,6 +52,7 @@ exports.listAll = async (page = 1, limit = 15) => {
       cp.image_url, 
       cp.post_type,
       u.full_name, 
+      u.username,
       u.avatar_url,
       0 AS reactions_count,
       0 AS comments_count,
@@ -117,6 +118,7 @@ exports.listByUser = async (userId, page = 1, limit = 15) => {
             cp.image_url, 
             cp.post_type,
             u.full_name, 
+            u.username,
             u.avatar_url,
             0 AS reactions_count,
             0 AS comments_count,
@@ -318,7 +320,7 @@ exports.react = async (postId, userId, emoji) => {
 exports.reactors = async (postId) => {
   const pool = getPool();
   const query = `
-      SELECT u.user_id, u.full_name, u.email, u.avatar_url, pr.emoji, pr.created_at
+      SELECT u.user_id, u.username, u.full_name, u.email, u.avatar_url, pr.emoji, pr.created_at
       FROM post_reactions pr
       JOIN users u ON u.user_id = pr.user_id
       WHERE pr.post_id = $1
@@ -344,7 +346,7 @@ exports.comments = async (postId) => {
   const pool = getPool();
   const query = `
       SELECT c.comment_id, c.content, c.created_at,
-             u.user_id, u.full_name, u.avatar_url
+             u.user_id, u.username, u.full_name, u.avatar_url
       FROM post_comments c
       JOIN users u ON u.user_id = c.user_id
       WHERE c.post_id = $1
@@ -357,7 +359,7 @@ exports.comments = async (postId) => {
 exports.commenters = async (postId) => {
   const pool = getPool();
   const query = `
-      SELECT DISTINCT u.user_id, u.full_name, u.email, u.avatar_url
+      SELECT DISTINCT u.user_id, u.username, u.full_name, u.email, u.avatar_url
       FROM post_comments c
       JOIN users u ON u.user_id = c.user_id
       WHERE c.post_id = $1
@@ -380,7 +382,7 @@ exports.share = async (postId, userId) => {
 exports.sharers = async (postId) => {
   const pool = getPool();
   const query = `
-      SELECT u.user_id, u.full_name, u.email, u.avatar_url, ps.created_at
+      SELECT u.user_id, u.username, u.full_name, u.email, u.avatar_url, ps.created_at
       FROM post_shares ps
       JOIN users u ON u.user_id = ps.user_id
       WHERE ps.post_id = $1
