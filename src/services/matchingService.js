@@ -1,19 +1,23 @@
 const { pool } = require('../config/db');
 const interestService = require('./interestService');
 const numerologyService = require('./numerologyService');
-const locationUtils = require('../utils/locationUtils');
+const { calculateDistance } = require('../utils/distanceCalculator');
 
 /**
  * MatchingService - Service nâng cấp với Phễu 4 Tầng
  * Tầng 0: Lọc an toàn (SQL)
- * Tầng 1: Điểm vị trí/khoảng cách (40%)
- * Tầng 2: Điểm sở thích (40%)
- * Tầng 3: Điểm thần số học (20%)
+ * Tầng 1: Khoảng cách địa lý (Priority Criterion - không lọc cứng)
+ * Tầng 2: Điểm sở thích (70%)
+ * Tầng 3: Điểm thần số học (30%)
+ * 
+ * LƯU Ý: Khoảng cách 40km được dùng làm tiêu chí ưu tiên (tie-breaker)
+ * khi 2 người có điểm phù hợp giống nhau
  */
 
 /**
  * Lấy danh sách ứng viên phù hợp cho matching
- * Áp dụng Tầng 0 trong SQL query
+ * Áp dụng Tầng 0 trong SQL query (chỉ lọc an toàn)
+ * Tầng 1 (khoảng cách) được xử lý sau như tiêu chí ưu tiên
  * @param {number} currentUserId - ID của user hiện tại
  * @returns {Promise<Array>} - Danh sách user phù hợp
  */
@@ -27,7 +31,9 @@ async function getCandidateUsers(currentUserId) {
       u.full_name,
       u.avatar_url,
       u.location,
-      u.dob
+      u.dob,
+      u.latitude,
+      u.longitude
     FROM users u
     WHERE 
       -- Tầng 0: Lọc an toàn
@@ -38,28 +44,30 @@ async function getCandidateUsers(currentUserId) {
         WHERE (ms.user_one = $1 AND ms.user_two = u.user_id)
            OR (ms.user_one = u.user_id AND ms.user_two = $1)
       )
-      -- Tầng 1: Lọc vị trí (ĐÃ BỎ strict match, để tính điểm khoảng cách)
     ORDER BY u.user_id
   `;
   
   const result = await pool.query(query, [currentUserId]);
   
-  console.log(`   ✅ Found ${result.rows.length} candidate users`);
+  console.log(`   ✅ Found ${result.rows.length} candidate users (before distance filtering)`);
   return result.rows;
 }
 
 /**
- * Tính điểm matching tổng hợp cho 2 user với Phễu 4 Tầng
- * Tầng 1: Điểm khoảng cách (40%)
- * Tầng 2: Điểm sở thích (40%)
- * Tầng 3: Điểm thần số học (20%)
- * @param {Object} user1 - Thông tin user 1 (phải có user_id, latitude, longitude, dob)
- * @param {Object} user2 - Thông tin user 2 (phải có user_id, latitude, longitude, dob)
- * @returns {Promise<Object>} - Kết quả matching với điểm số chi tiết
+ * Tính điểm matching tổng hợp cho 2 user
+ * Tầng 2: Điểm sở thích (70%)
+ * Tầng 3: Điểm thần số học (30%)
+ * @param {number} userId1 - ID user thứ nhất
+ * @param {number} userId2 - ID user thứ hai
+ * @param {Date|string} dob1 - Ngày sinh user 1
+ * @param {Date|string} dob2 - Ngày sinh user 2
+ * @param {number} lat1 - Vĩ độ user 1
+ * @param {number} lon1 - Kinh độ user 1
+ * @param {number} lat2 - Vĩ độ user 2
+ * @param {number} lon2 - Kinh độ user 2
+ * @returns {Promise<Object>} - Kết quả matching với điểm số chi tiết và khoảng cách
  */
-async function calculateTotalMatchScore(user1, user2) {
-  const { user_id: userId1, dob: dob1, latitude: lat1, longitude: lon1, location: loc1 } = user1;
-  const { user_id: userId2, dob: dob2, latitude: lat2, longitude: lon2, location: loc2 } = user2;
+async function calculateTotalMatchScore(userId1, userId2, dob1, dob2, lat1, lon1, lat2, lon2) {
   console.log(`\n🧮 [MatchingService] Calculating total match score`);
   console.log(`   User ${userId1} <-> User ${userId2}`);
   
@@ -102,13 +110,17 @@ async function calculateTotalMatchScore(user1, user2) {
   const numerologyScore = (rawNumerologyScore / 30) * 20;
   console.log(`   🌟 Numerology Score: ${numerologyScore.toFixed(2)}/20 (raw: ${rawNumerologyScore}/30)`);
   
+  // ===== TÍNH KHOẢNG CÁCH ĐỊA LÝ =====
+  const distance = calculateDistance(lat1, lon1, lat2, lon2);
+  console.log(`\n   📍 Distance: ${distance !== null ? distance + ' km' : 'Unknown'}`);
+  
   // ===== TỔNG KẾT =====
   const totalScore = distanceScore + interestScore + numerologyScore;
   
   console.log(`\n   🎯 TOTAL MATCH SCORE: ${totalScore.toFixed(2)}/100`);
-  console.log(`      - Distance (40%): ${distanceScore.toFixed(2)}`);
-  console.log(`      - Interest (40%): ${interestScore.toFixed(2)}`);
-  console.log(`      - Numerology (20%): ${numerologyScore.toFixed(2)}`);
+  console.log(`      - Interest (70%): ${interestScore.toFixed(2)}`);
+  console.log(`      - Numerology (30%): ${numerologyScore}`);
+  console.log(`      - Distance: ${distance !== null ? distance + ' km' : 'N/A'}`);
   console.log(`      - Common interests: ${commonInterests.length}`);
   
   return {
@@ -117,6 +129,7 @@ async function calculateTotalMatchScore(user1, user2) {
     totalScore: Math.round(totalScore * 100) / 100,
     interestScore: Math.round(interestScore * 100) / 100,
     numerologyScore,
+    distance,
     lifePathNum1,
     lifePathNum2,
     commonInterests,
@@ -132,10 +145,14 @@ async function calculateTotalMatchScore(user1, user2) {
         rawScore: Math.round(rawInterestScore * 100) / 100
       },
       numerology: {
-        score: Math.round(numerologyScore * 100) / 100,
-        weight: '20%',
-        lifePathNumbers: [lifePathNum1, lifePathNum2],
-        rawScore: rawNumerologyScore
+        score: numerologyScore,
+        weight: '30%',
+        lifePathNumbers: [lifePathNum1, lifePathNum2]
+      },
+      distance: {
+        value: distance,
+        unit: 'km',
+        note: 'Used as tie-breaker when scores are equal'
       }
     }
   };
@@ -143,6 +160,7 @@ async function calculateTotalMatchScore(user1, user2) {
 
 /**
  * Tìm người phù hợp nhất cho user hiện tại
+ * Sắp xếp theo totalScore (giảm dần), nếu bằng nhau thì ưu tiên người gần hơn
  * @param {number} currentUserId - ID của user hiện tại
  * @returns {Promise<Object|null>} - Thông tin người phù hợp nhất hoặc null
  */
@@ -162,8 +180,9 @@ async function findBestMatchForUser(currentUserId) {
   
   const currentUser = currentUserQuery.rows[0];
   console.log(`   👤 Current user: ${currentUser.username} (${currentUser.location})`);
+  console.log(`   📍 Coordinates: ${currentUser.latitude}, ${currentUser.longitude}`);
   
-  // Lấy danh sách ứng viên (ĐÃ BỎ LỘC CÙNG THÀNH PHỐ)
+  // Lấy danh sách ứng viên (chỉ lọc Tầng 0 - an toàn)
   const candidates = await getCandidateUsers(currentUserId);
   
   if (candidates.length === 0) {
@@ -181,8 +200,14 @@ async function findBestMatchForUser(currentUserId) {
     console.log(`   Evaluating: User ${candidate.user_id} (${candidate.username})`);
     
     const matchScore = await calculateTotalMatchScore(
-      currentUser,
-      candidate
+      currentUserId,
+      candidate.user_id,
+      currentUser.dob,
+      candidate.dob,
+      currentUser.latitude,
+      currentUser.longitude,
+      candidate.latitude,
+      candidate.longitude
     );
     
     matchResults.push({
@@ -197,8 +222,21 @@ async function findBestMatchForUser(currentUserId) {
     });
   }
   
-  // Sắp xếp theo điểm tổng (giảm dần)
-  matchResults.sort((a, b) => b.totalScore - a.totalScore);
+  // Sắp xếp theo điểm tổng (giảm dần), nếu bằng nhau thì ưu tiên người gần hơn
+  matchResults.sort((a, b) => {
+    // So sánh điểm tổng trước
+    if (b.totalScore !== a.totalScore) {
+      return b.totalScore - a.totalScore;
+    }
+    
+    // Nếu điểm bằng nhau, ưu tiên người gần hơn (khoảng cách nhỏ hơn)
+    // Xử lý trường hợp distance null (đặt ở cuối)
+    if (a.distance === null && b.distance === null) return 0;
+    if (a.distance === null) return 1;
+    if (b.distance === null) return -1;
+    
+    return a.distance - b.distance;
+  });
   
   console.log(`\n   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
   console.log(`   🏆 BEST MATCH FOUND!`);
@@ -209,7 +247,17 @@ async function findBestMatchForUser(currentUserId) {
   console.log(`   📊 Total Score: ${bestMatch.totalScore}/100`);
   console.log(`   💝 Interest Score: ${bestMatch.interestScore}/70`);
   console.log(`   🔮 Numerology Score: ${bestMatch.numerologyScore}/30`);
+  console.log(`   📍 Distance: ${bestMatch.distance !== null ? bestMatch.distance + ' km' : 'N/A'}`);
   console.log(`   🎯 Common Interests: ${bestMatch.commonInterests.length}`);
+  
+  // Hiển thị top 3 để so sánh
+  if (matchResults.length > 1) {
+    console.log(`\n   📊 Top 3 Matches for comparison:`);
+    matchResults.slice(0, 3).forEach((match, index) => {
+      console.log(`   ${index + 1}. ${match.candidateInfo.username}: ${match.totalScore}/100 (${match.distance !== null ? match.distance + ' km' : 'N/A'})`);
+    });
+  }
+  
   console.log(`   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
   
   return bestMatch;
