@@ -91,10 +91,16 @@ const getOrInitPrivateConversation = async (user1, user2, activityId = null) => 
                 throw new Error('Người dùng này chưa được duyệt tham gia hoạt động');
             }
         } else {
-            // Check for Match
+            // Check for Match OR Following
             const isMatched = await matchService.checkMatchExists(user1, user2);
             if (!isMatched) {
-                throw new Error('Bạn cần được ghép đôi thành công mới có thể nhắn tin');
+                // If not matched, allow chat if there is a follow relationship
+                const profileService = require('./profile.service');
+                const follows = await profileService.isFollowing(user1, user2);
+                
+                if (!follows) {
+                    throw new Error('Bạn cần được ghép đôi thành công hoặc theo dõi người này mới có thể nhắn tin');
+                }
             }
         }
         // --- END AUTHORIZATION CHECK ---
