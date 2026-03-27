@@ -212,6 +212,57 @@ const getUserActivities = async (userId) => {
   return result.rows;
 };
 
+const createActivity = async (activityData) => {
+  const pool = getPool();
+  const { user_id, title, description, location, max_participants, duration_minutes, status } = activityData;
+  
+  const query = `
+    INSERT INTO activities (creator_id, title, description, location, max_participants, duration_minutes, status)
+    VALUES ($1, $2, $3, $4, $5, $6, $7)
+    RETURNING activity_id
+  `;
+  
+  const values = [
+    user_id, 
+    title, 
+    description || '', 
+    location || '', 
+    max_participants || 1, 
+    duration_minutes || 60,
+    status || 'active' // Mặc định là active để bỏ qua bước duyệt nếu cần, hoặc pending
+  ];
+  
+  const result = await pool.query(query, values);
+  return result.rows[0].activity_id;
+};
+
+const saveActivityImages = async (activityId, images) => {
+  if (!images || !Array.isArray(images) || images.length === 0) return;
+  
+  const pool = getPool();
+  for (let i = 0; i < images.length; i++) {
+    const query = `
+      INSERT INTO activity_images (activity_id, image_url, sort_order, is_thumbnail)
+      VALUES ($1, $2, $3, $4)
+    `;
+    await pool.query(query, [activityId, images[i], i, i === 0]);
+  }
+};
+
+const saveActivityTags = async (activityId, interestIds) => {
+  if (!interestIds || !Array.isArray(interestIds) || interestIds.length === 0) return;
+  
+  const pool = getPool();
+  for (const interestId of interestIds) {
+    const query = `
+      INSERT INTO activity_tags (activity_id, interest_id)
+      VALUES ($1, $2)
+      ON CONFLICT DO NOTHING
+    `;
+    await pool.query(query, [activityId, interestId]);
+  }
+};
+
 module.exports = {
   getPendingActivities,
   deleteActivityRequest,
@@ -226,5 +277,8 @@ module.exports = {
   deleteActivity,
   checkActivityRequestStatus,
   getActivityHostId,
-  getUserActivities
+  getUserActivities,
+  createActivity,
+  saveActivityImages,
+  saveActivityTags
 };

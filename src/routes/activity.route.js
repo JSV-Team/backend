@@ -7,6 +7,7 @@ const { verifyToken } = require('../middlewares/auth.middleware');
 // GET /api/activities (Public - list all activities)
 // =============================================
 router.get('/', activityController.getActivities);
+router.post('/', verifyToken, activityController.createActivity);
 
 // =============================================
 // GET /api/activities/pending-activities (Protected)
