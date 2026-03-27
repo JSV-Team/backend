@@ -120,15 +120,19 @@ const createActivityRequest = async (activityId, userId) => {
   return result.rows[0].request_id;
 };
 
-const approveActivityRequest = async (requestId) => {
+const approveActivityRequest = async (requestId, userId) => {
   const pool = getPool();
   const query = `
-    UPDATE activity_requests 
-    SET status = 'accepted' 
-    WHERE request_id = $1 AND status = 'pending'
-    RETURNING activity_id, requester_id
+    UPDATE activity_requests ar
+    SET status = 'accepted'
+    FROM activities a
+    WHERE ar.activity_id = a.activity_id
+      AND ar.request_id = $1 
+      AND ar.status = 'pending'
+      AND a.creator_id = $2
+    RETURNING ar.activity_id, ar.requester_id
   `;
-  const result = await pool.query(query, [requestId]);
+  const result = await pool.query(query, [requestId, userId]);
   return result.rows[0];
 };
 
@@ -144,15 +148,19 @@ const deleteActivity = async (activityId, userId) => {
   return result.rows[0];
 };
 
-const rejectActivityRequest = async (requestId) => {
+const rejectActivityRequest = async (requestId, userId) => {
   const pool = getPool();
   const query = `
-    UPDATE activity_requests 
+    UPDATE activity_requests ar
     SET status = 'rejected' 
-    WHERE request_id = $1 AND status = 'pending'
-    RETURNING activity_id, requester_id
+    FROM activities a
+    WHERE ar.activity_id = a.activity_id
+      AND ar.request_id = $1 
+      AND ar.status = 'pending'
+      AND a.creator_id = $2
+    RETURNING ar.activity_id, ar.requester_id
   `;
-  const result = await pool.query(query, [requestId]);
+  const result = await pool.query(query, [requestId, userId]);
   return result.rows[0];
 };
 
