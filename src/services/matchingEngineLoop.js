@@ -2,8 +2,8 @@ const matchEngine = require('./matchEngine');
 const matchService = require('./matchService');
 const queueService = require('./queueService');
 
-// Constants
-const MATCHING_INTERVAL_MS = 2000;
+// Constants for matching behavior
+const MATCHING_INTERVAL_MS = 5000; // 5 seconds for more responsive matching
 
 // Singleton matching engine instance
 const matchingEngine = new matchEngine();
@@ -123,10 +123,15 @@ async function runMatchingCycle() {
       };
     }).filter(Boolean);
 
-    console.log(`\n📍 Users with location info:`);
+    console.log(`\n📍 Users with location info: ${usersForMatching.length}`);
     usersForMatching.forEach((u, idx) => {
-      console.log(`   ${idx + 1}. User ${u.userId}: location="${u.location}", lat=${u.latitude}, lon=${u.longitude}`);
+      console.log(`   ${idx + 1}. User ${u.userId} (${u.username}): loc="${u.location}", coords=(${u.latitude}, ${u.longitude})`);
     });
+
+    if (usersForMatching.length < 2) {
+      console.log(`⏭️  Skipping matching - not enough users with valid DB info (need 2, have ${usersForMatching.length})`);
+      return;
+    }
 
     // ===== BƯỚC 2: TÌM MATCH TRÊN TOÀN BỘ QUEUE (ƯU TIÊN KHOẢNG CÁCH) =====
     console.log(`\n🔍 Finding best match among all ${usersForMatching.length} users in queue...`);
