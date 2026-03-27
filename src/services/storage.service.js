@@ -5,11 +5,13 @@ const path = require('path');
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-if (!supabaseUrl || !supabaseKey) {
-  console.error('❌ Missing Supabase credentials in .env');
-}
+let supabase = null;
 
-const supabase = createClient(supabaseUrl, supabaseKey);
+if (!supabaseUrl || !supabaseKey) {
+  console.warn('⚠️ WARNING: Missing Supabase credentials in .env. Image uploads will NOT work.');
+} else {
+  supabase = createClient(supabaseUrl, supabaseKey);
+}
 const BUCKET_NAME = 'images';
 
 /**
@@ -20,6 +22,10 @@ const BUCKET_NAME = 'images';
  * @returns {Promise<string>} Public URL of the uploaded image
  */
 const uploadFile = async (fileBuffer, fileName, mimeType) => {
+  if (!supabase) {
+    throw new Error('Hệ thống lưu trữ đám mây chưa được cấu hình. Vui lòng kiểm tra SUPABASE_URL và KEY trên Render.');
+  }
+
   try {
     // Generate secure unique filename
     const ext = path.extname(fileName).toLowerCase();
@@ -63,10 +69,9 @@ const uploadFile = async (fileBuffer, fileName, mimeType) => {
  * @param {string} url - Public URL of the file
  */
 const deleteFileByUrl = async (url) => {
+  if (!supabase || !url) return;
+
   try {
-    if (!url) return;
-    
-    // Extract filename from URL
     // URL pattern: https://.../storage/v1/object/public/images/filename.jpg
     const parts = url.split('/');
     const fileName = parts[parts.length - 1];
