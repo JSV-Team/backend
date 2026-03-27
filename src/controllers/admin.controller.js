@@ -184,7 +184,7 @@ const getAllUsers = async (req, res) => {
     try {
         const pool = getPool();
         const result = await pool.query(`
-            SELECT u.user_id, u.username, u.full_name, u.email, u.role, u.status, u.is_locked, u.created_at,
+            SELECT u.user_id, u.username, u.full_name, u.email, u.avatar_url, u.role, u.status, u.is_locked, u.created_at,
                 COUNT(a.activity_id) as posts
             FROM users u
             LEFT JOIN activities a ON a.creator_id = u.user_id
@@ -227,51 +227,49 @@ const toggleUserLock = async (req, res) => {
 const getAllActivities = async (req, res) => {
     try {
         const pool = getPool();
+        // Query with subqueries for better aggregation performance
         const result = await pool.query(`
-            SELECT a.activity_id AS id, a.title, a.description, a.status, a.created_at,
-                a.location, a.max_participants, a.duration_minutes,
-                u.full_name AS "user",
+            SELECT 
+                a.activity_id AS id, 
+                a.creator_id,
+                a.title, 
+                a.description, 
+                a.status, 
+                a.created_at,
+                a.location, 
+                a.max_participants, 
+                a.duration_minutes,
+                u.full_name AS "user", 
+                u.avatar_url, 
+                u.username,
                 (SELECT COUNT(report_id) FROM reports r WHERE r.reported_activity_id = a.activity_id) AS reports,
-                i.name AS tag_name,
-                img.image_url
+                (SELECT json_agg(i.name) FROM activity_tags at2 JOIN interests i ON at2.interest_id = i.interest_id WHERE at2.activity_id = a.activity_id) AS tags,
+                (SELECT json_agg(img.image_url ORDER BY sort_order) FROM activity_images img WHERE img.activity_id = a.activity_id) AS images,
+                (SELECT image_url FROM activity_images WHERE activity_id = a.activity_id ORDER BY is_thumbnail DESC, sort_order ASC LIMIT 1) AS image_url
             FROM activities a
             LEFT JOIN users u ON a.creator_id = u.user_id
-            LEFT JOIN activity_tags at2 ON a.activity_id = at2.activity_id
-            LEFT JOIN interests i ON at2.interest_id = i.interest_id
-            LEFT JOIN activity_images img ON a.activity_id = img.activity_id
             ORDER BY a.created_at DESC
         `);
 
-        const activityMap = new Map();
-        result.rows.forEach(row => {
-            if (!row.id) return;
-            if (!activityMap.has(row.id)) {
-                activityMap.set(row.id, { 
-                    id: row.id,
-                    title: row.title,
-                    status: row.status,
-                    created_at: row.created_at,
-                    content: row.description,
-                    location: row.location,
-                    max_participants: row.max_participants,
-                    duration_minutes: row.duration_minutes,
-                    user: row.user,
-                    reports: parseInt(row.reports) || 0,
-                    time: formatTimeAgo(row.created_at),
-                    tags: new Set(),
-                    images: new Set()
-                });
-            }
-            const act = activityMap.get(row.id);
-            if (row.tag_name) act.tags.add(row.tag_name);
-            if (row.image_url) act.images.add(row.image_url);
-        });
-
-        const formatted = Array.from(activityMap.values()).map(act => ({
-            ...act,
-            tags: act.tags.size > 0 ? Array.from(act.tags) : ['Hoạt động'],
-            images: Array.from(act.images),
-            image_url: Array.from(act.images)[0] || null
+        const formatted = result.rows.map(row => ({
+            id: row.id,
+            title: row.title,
+            description: row.description,
+            content: row.description || '',
+            status: row.status,
+            created_at: row.created_at,
+            time: formatTimeAgo(row.created_at),
+            location: row.location || '',
+            max_participants: row.max_participants || 1,
+            duration_minutes: row.duration_minutes || 60,
+            creator_id: row.creator_id,
+            user: row.user || 'Người dùng',
+            avatar_url: row.avatar_url,
+            username: row.username,
+            reports: parseInt(row.reports) || 0,
+            tags: row.tags || ['Hoạt động'],
+            images: row.images || [],
+            image_url: row.image_url || null
         }));
 
         res.json({ success: true, data: formatted });

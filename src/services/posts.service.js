@@ -7,7 +7,7 @@ const bannedKeywordModel = require('../models/bannedKeyword.model');
 exports.listAll = async (page = 1, limit = 15) => {
   const pool = getPool();
   const offset = (page - 1) * limit;
-  
+
   const query = `
     WITH combined_posts AS (
       SELECT 
@@ -19,7 +19,8 @@ exports.listAll = async (page = 1, limit = 15) => {
         a.duration_minutes, 
         a.max_participants, 
         a.created_at,
-        (SELECT image_url FROM activity_images WHERE activity_id = a.activity_id LIMIT 1) AS image_url,
+        (SELECT json_agg(image_url ORDER BY sort_order) FROM activity_images WHERE activity_id = a.activity_id) AS images,
+        (SELECT image_url FROM activity_images WHERE activity_id = a.activity_id ORDER BY sort_order LIMIT 1) AS image_url,
         'activity' AS post_type
       FROM activities a
       WHERE a.status = 'active'
@@ -35,6 +36,7 @@ exports.listAll = async (page = 1, limit = 15) => {
         NULL AS duration_minutes, 
         NULL AS max_participants, 
         s.created_at,
+        CASE WHEN s.image_url IS NOT NULL THEN json_build_array(s.image_url) ELSE NULL END AS images,
         s.image_url,
         'status' AS post_type
       FROM daily_status s
@@ -50,6 +52,7 @@ exports.listAll = async (page = 1, limit = 15) => {
       cp.max_participants, 
       cp.created_at, 
       cp.image_url, 
+      cp.images,
       cp.post_type,
       u.full_name, 
       u.avatar_url,
@@ -71,9 +74,9 @@ exports.listAll = async (page = 1, limit = 15) => {
 exports.listByUser = async (userId, page = 1, limit = 15) => {
   const pool = getPool();
   const offset = (page - 1) * limit;
-  
+
   // Combine activities and daily_status to show in profile 'posts' tab
-    const query = `
+  const query = `
         WITH combined_posts AS (
             SELECT 
                 a.activity_id AS post_id, 
@@ -84,7 +87,8 @@ exports.listByUser = async (userId, page = 1, limit = 15) => {
                 a.duration_minutes, 
                 a.max_participants, 
                 a.created_at,
-                (SELECT image_url FROM activity_images WHERE activity_id = a.activity_id LIMIT 1) AS image_url,
+                (SELECT json_agg(image_url ORDER BY sort_order) FROM activity_images WHERE activity_id = a.activity_id) AS images,
+                (SELECT image_url FROM activity_images WHERE activity_id = a.activity_id ORDER BY sort_order LIMIT 1) AS image_url,
                 'activity' AS post_type
             FROM activities a
             WHERE a.creator_id = $1 AND a.status = 'active'
@@ -100,6 +104,7 @@ exports.listByUser = async (userId, page = 1, limit = 15) => {
                 NULL AS duration_minutes, 
                 NULL AS max_participants, 
                 s.created_at,
+                CASE WHEN s.image_url IS NOT NULL THEN json_build_array(s.image_url) ELSE NULL END AS images,
                 s.image_url,
                 'status' AS post_type
             FROM daily_status s
@@ -115,6 +120,7 @@ exports.listByUser = async (userId, page = 1, limit = 15) => {
             cp.max_participants, 
             cp.created_at, 
             cp.image_url, 
+            cp.images,
             cp.post_type,
             u.full_name, 
             u.avatar_url,
@@ -126,8 +132,8 @@ exports.listByUser = async (userId, page = 1, limit = 15) => {
         ORDER BY cp.created_at DESC
         LIMIT $2 OFFSET $3
     `;
-    const r = await pool.query(query, [userId, limit, offset]);
-    return r.rows;
+  const r = await pool.query(query, [userId, limit, offset]);
+  return r.rows;
 };
 
 /**
@@ -137,14 +143,14 @@ exports.createPost = async (userId, payload) => {
   console.log(`[posts.service] createPost - userId: ${userId} (${typeof userId})`);
 
   if (payload.duration_minutes !== undefined && payload.duration_minutes !== null) {
-      if (Number(payload.duration_minutes) <= 0) {
-          throw new Error('Thời lượng phải là số dương lớn hơn 0');
-      }
+    if (Number(payload.duration_minutes) <= 0) {
+      throw new Error('Thời lượng phải là số dương lớn hơn 0');
+    }
   }
 
   const descriptionCheck = payload.description || payload.desc || "";
   if (descriptionCheck.length > 3000) {
-      throw new Error('Văn bản mô tả quá dài (tối đa 3000 ký tự)');
+    throw new Error('Văn bản mô tả quá dài (tối đa 3000 ký tự)');
   }
 
   // Banned keyword check
@@ -209,7 +215,7 @@ exports.createStatus = async (userId, payload) => {
   const { title, content, description, media = [] } = payload;
   const imageUrl = media.length > 0 ? media[0].url : (payload.image_url || null);
   const statusContent = title || content || description || "";
-  
+
   const expiresAt = new Date();
   expiresAt.setDate(expiresAt.getDate() + 1);
 
