@@ -12,7 +12,9 @@ const setupSocket = (server) => {
             origin: process.env.CLIENT_URL || '*', 
             methods: ["GET", "POST", "PATCH"],
             credentials: true
-        }
+        },
+        pingTimeout: 60000,
+        pingInterval: 25000
     });
 
     // Middleware check connection — verify JWT, do NOT trust client-sent userId
