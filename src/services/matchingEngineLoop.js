@@ -53,7 +53,9 @@ function stopMatchingEngine() {
 
 /**
  * Run a single matching cycle
- * Gets users from queue, finds best match, creates session and casync function runMatchingCycle() {
+ * Gets users from queue, finds best match, creates session and conversation
+ */
+async function runMatchingCycle() {
   try {
     // Get users from queue
     const queueInfo = queueService.getQueueInfo();
@@ -61,17 +63,16 @@ function stopMatchingEngine() {
     console.log(`\n🔄 ========== MATCHING CYCLE START ==========`);
     console.log(`📊 Queue size: ${queueInfo.data?.size || 0}`);
 
-    if (!queueInfo.success || queueInfo.data.size < 2) {
-      console.log(`⏭️  Skipping cycle - not enough users (need at least 2)`);
+    const users = queueInfo.data.users; // Define users here
+
+    if (!queueInfo.success || users.length < 2) {
+      console.log(`⏭️  Skipping cycle - not enough users (need at least 1 more, current: ${users.length})`);
       console.log(`🔄 ========== MATCHING CYCLE END ==========\n`);
       return; // Not enough users to match
     }
 
-    const users = queueInfo.data.users;
     console.log(`\n👥 Users in queue (${users.length}):`);
-    users.forEach((u, idx) => {
-      console.log(`   ${idx + 1}. User ${u.userId}: ${u.interests?.length || 0} interests - [${u.interests?.join(', ') || 'none'}]`);
-    });
+    users.forEach(u => console.log(`   - User ${u.userId}${u.username ? ` (${u.username})` : ''} at ${u.location || 'Unknown'}`));
 
     // ===== BƯỚC 1: LẤY THÔNG TIN ĐẦY ĐỦ CỦA USERS (bao gồm location, dob, coordinates) =====
     const { getPool } = require('../config/db');
@@ -111,17 +112,16 @@ function stopMatchingEngine() {
 
     // Chuẩn bị dữ liệu cho matching
     const usersForMatching = users.map(u => {
-      const userInfo = usersInfoMap.get(u.userId);
+      const info = usersInfoMap.get(parseInt(u.userId));
+      if (!info) return null;
       return {
-        userId: u.userId,
-        joinedAt: u.joinedAt,
-        location: userInfo?.location || null,
-        dob: userInfo?.dob || null,
-        latitude: userInfo?.latitude || null,
-        longitude: userInfo?.longitude || null,
-        username: userInfo?.username || `User ${u.userId}`
+        ...u,
+        ...info,
+        user_id: info.user_id,
+        userId: info.user_id, // Ensure both are present
+        joinedAt: u.joinedAt || new Date().toISOString()
       };
-    });
+    }).filter(Boolean);
 
     console.log(`\n📍 Users with location info:`);
     usersForMatching.forEach((u, idx) => {

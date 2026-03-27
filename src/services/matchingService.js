@@ -58,19 +58,22 @@ async function getCandidateUsers(currentUserId) {
  * @returns {Promise<Object>} - Kết quả matching với điểm số chi tiết
  */
 async function calculateTotalMatchScore(user1, user2) {
-  const { user_id: userId1, dob: dob1, latitude: lat1, longitude: lon1 } = user1;
-  const { user_id: userId2, dob: dob2, latitude: lat2, longitude: lon2 } = user2;
+  const { user_id: userId1, dob: dob1, latitude: lat1, longitude: lon1, location: loc1 } = user1;
+  const { user_id: userId2, dob: dob2, latitude: lat2, longitude: lon2, location: loc2 } = user2;
   console.log(`\n🧮 [MatchingService] Calculating total match score`);
   console.log(`   User ${userId1} <-> User ${userId2}`);
   
-  // ===== TẦNG 1: ĐIỂM KHOẢNG CÁCH (40%) =====
+  // =====  // 1. Tính điểm khoảng cách (40 điểm)
   console.log(`\n   📍 TẦNG 1: Calculating Distance Score (max 40 points)`);
-  
   const distance = locationUtils.calculateDistance(lat1, lon1, lat2, lon2);
-  const rawDistanceScore = locationUtils.calculateDistanceScore(distance, 100); // Max distance 100km
+  const rawDistanceScore = locationUtils.calculateDistanceScoreWithFallback(distance, loc1, loc2);
   const distanceScore = (rawDistanceScore / 100) * 40;
   
-  console.log(`   📏 Distance: ${distance.toFixed(2)} km`);
+  if (distance !== Infinity) {
+    console.log(`   📏 Distance: ${distance.toFixed(2)} km`);
+  } else {
+    console.log(`   ⚠️ Coordinates missing, using location string matching`);
+  }
   console.log(`   📈 Distance Score: ${distanceScore.toFixed(2)}/40 (raw: ${rawDistanceScore}%)`);
   
   // ===== TẦNG 2: ĐIỂM SỞ THÍCH (40%) =====

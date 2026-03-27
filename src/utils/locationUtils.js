@@ -41,7 +41,42 @@ function calculateDistanceScore(distanceKm, maxDistance = 100) {
   return Math.max(0, Math.round(100 * (1 - distanceKm / maxDistance)));
 }
 
+/**
+ * Calculate a distance score with fallback to location string comparison
+ * @param {number} distanceKm - Distance in km
+ * @param {string} loc1 - Location string 1
+ * @param {string} loc2 - Location string 2
+ * @returns {number} Score from 0 to 100
+ */
+function calculateDistanceScoreWithFallback(distanceKm, loc1, loc2) {
+  // If we have a valid distance, use it
+  if (distanceKm !== Infinity && distanceKm !== null) {
+    return calculateDistanceScore(distanceKm);
+  }
+
+  // Fallback to location string matching
+  if (!loc1 || !loc2) return 0;
+
+  const normalize = (str) => 
+    str.toLowerCase()
+       .normalize('NFD')
+       .replace(/[\u0300-\u036f]/g, '') // remove diacritics
+       .trim();
+
+  if (normalize(loc1) === normalize(loc2)) {
+    return 80; // Default score for same location if coordinates missing
+  }
+
+  // If one contains the other (e.g., "Hồ Chí Minh" and "TP. Hồ Chí Minh")
+  if (normalize(loc1).includes(normalize(loc2)) || normalize(loc2).includes(normalize(loc1))) {
+    return 60;
+  }
+
+  return 0;
+}
+
 module.exports = {
   calculateDistance,
-  calculateDistanceScore
+  calculateDistanceScore,
+  calculateDistanceScoreWithFallback
 };
