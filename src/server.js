@@ -41,6 +41,9 @@ const startServer = async () => {
         
         ALTER TABLE match_sessions DROP CONSTRAINT IF EXISTS chk_match_type;
         ALTER TABLE match_sessions ADD CONSTRAINT chk_match_type CHECK (match_type IN ('random', 'selective', 'interest'));
+        
+        -- Add match_score to match_sessions if missing
+        ALTER TABLE match_sessions ADD COLUMN IF NOT EXISTS match_score INT DEFAULT 0;
       `);
       console.log('✅ DB Constraints & Columns auto-patched for new features');
       

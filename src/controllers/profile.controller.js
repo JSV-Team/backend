@@ -47,7 +47,7 @@ const getPublicProfile = async (req, res) => {
         }
 
         // New: Check for active story
-        const hasStory = await profileService.hasActiveStory(userId);
+        const hasStory = await profileService.hasActiveStory(targetUserId);
 
         return res.status(200).json({
             success: true,

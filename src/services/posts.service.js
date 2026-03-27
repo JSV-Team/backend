@@ -9,59 +9,28 @@ exports.listAll = async (page = 1, limit = 15) => {
   const offset = (page - 1) * limit;
 
   const query = `
-    WITH combined_posts AS (
-      SELECT 
-        a.activity_id AS post_id, 
-        a.creator_id AS creator_id, 
-        a.title AS content, 
-        a.description AS extra_content, 
-        a.location, 
-        a.duration_minutes, 
-        a.max_participants, 
-        a.created_at,
-        (SELECT json_agg(image_url ORDER BY sort_order) FROM activity_images WHERE activity_id = a.activity_id) AS images,
-        (SELECT image_url FROM activity_images WHERE activity_id = a.activity_id ORDER BY sort_order LIMIT 1) AS image_url,
-        'activity' AS post_type
-      FROM activities a
-      WHERE a.status = 'active'
-      
-      UNION ALL
-      
-      SELECT 
-        s.status_id AS post_id, 
-        s.user_id AS creator_id, 
-        s.content, 
-        '' AS extra_content, 
-        '' AS location, 
-        NULL AS duration_minutes, 
-        NULL AS max_participants, 
-        s.created_at,
-        CASE WHEN s.image_url IS NOT NULL THEN json_build_array(s.image_url) ELSE NULL END AS images,
-        s.image_url,
-        'status' AS post_type
-      FROM daily_status s
-      WHERE s.expires_at > NOW()
-    )
     SELECT 
-      cp.post_id, 
-      cp.creator_id AS user_id, 
-      cp.content, 
-      cp.extra_content, 
-      cp.location, 
-      cp.duration_minutes, 
-      cp.max_participants, 
-      cp.created_at, 
-      cp.image_url, 
-      cp.images,
-      cp.post_type,
+      a.activity_id AS post_id, 
+      a.creator_id AS user_id, 
+      a.title AS content, 
+      a.description AS extra_content, 
+      a.location, 
+      a.duration_minutes, 
+      a.max_participants, 
+      a.created_at,
+      (SELECT image_url FROM activity_images WHERE activity_id = a.activity_id ORDER BY sort_order LIMIT 1) AS image_url,
+      (SELECT json_agg(image_url ORDER BY sort_order) FROM activity_images WHERE activity_id = a.activity_id) AS images,
+      'activity' AS post_type,
       u.full_name, 
       u.avatar_url,
+      u.username,
       0 AS reactions_count,
       0 AS comments_count,
       0 AS shares_count
-    FROM combined_posts cp
-    JOIN users u ON u.user_id = cp.creator_id
-    ORDER BY cp.created_at DESC
+    FROM activities a
+    JOIN users u ON u.user_id = a.creator_id
+    WHERE a.status = 'active'
+    ORDER BY a.created_at DESC
     LIMIT $1 OFFSET $2
   `;
   const r = await pool.query(query, [limit, offset]);
@@ -75,61 +44,30 @@ exports.listByUser = async (userId, page = 1, limit = 15) => {
   const pool = getPool();
   const offset = (page - 1) * limit;
 
-  // Combine activities and daily_status to show in profile 'posts' tab
+  // Lấy danh sách trạng thái (Daily Status) của người dùng để hiển thị trong tab Bài viết
   const query = `
-        WITH combined_posts AS (
-            SELECT 
-                a.activity_id AS post_id, 
-                a.creator_id AS creator_id, 
-                a.title AS content, 
-                a.description AS extra_content, 
-                a.location, 
-                a.duration_minutes, 
-                a.max_participants, 
-                a.created_at,
-                (SELECT json_agg(image_url ORDER BY sort_order) FROM activity_images WHERE activity_id = a.activity_id) AS images,
-                (SELECT image_url FROM activity_images WHERE activity_id = a.activity_id ORDER BY sort_order LIMIT 1) AS image_url,
-                'activity' AS post_type
-            FROM activities a
-            WHERE a.creator_id = $1 AND a.status = 'active'
-            
-            UNION ALL
-            
-            SELECT 
-                s.status_id AS post_id, 
-                s.user_id AS creator_id, 
-                s.content, 
-                '' AS extra_content, 
-                '' AS location, 
-                NULL AS duration_minutes, 
-                NULL AS max_participants, 
-                s.created_at,
-                CASE WHEN s.image_url IS NOT NULL THEN json_build_array(s.image_url) ELSE NULL END AS images,
-                s.image_url,
-                'status' AS post_type
-            FROM daily_status s
-            WHERE s.user_id = $1
-        )
         SELECT 
-            cp.post_id, 
-            cp.creator_id AS user_id, 
-            cp.content, 
-            cp.extra_content, 
-            cp.location, 
-            cp.duration_minutes, 
-            cp.max_participants, 
-            cp.created_at, 
-            cp.image_url, 
-            cp.images,
-            cp.post_type,
+            s.status_id AS post_id, 
+            s.user_id AS creator_id, 
+            s.content, 
+            '' AS extra_content, 
+            '' AS location, 
+            NULL AS duration_minutes, 
+            NULL AS max_participants, 
+            s.created_at,
+            CASE WHEN s.image_url IS NOT NULL THEN json_build_array(s.image_url) ELSE NULL END AS images,
+            s.image_url,
+            'status' AS post_type,
             u.full_name, 
             u.avatar_url,
+            u.username,
             0 AS reactions_count,
             0 AS comments_count,
             0 AS shares_count
-        FROM combined_posts cp
-        JOIN users u ON u.user_id = cp.creator_id
-        ORDER BY cp.created_at DESC
+        FROM daily_status s
+        JOIN users u ON u.user_id = s.user_id
+        WHERE s.user_id = $1
+        ORDER BY s.created_at DESC
         LIMIT $2 OFFSET $3
     `;
   const r = await pool.query(query, [userId, limit, offset]);
