@@ -73,10 +73,14 @@ const joinActivity = asyncHandler(async (req, res) => {
 const approveActivityRequest = asyncHandler(async (req, res) => {
     try {
         const requestId = parseInt(req.params.id);
-        const data = await activityService.approveActivityRequest(requestId);
+        const userId = req.user.user_id;
+        const data = await activityService.approveActivityRequest(requestId, userId);
         res.json({ message: 'Đã duyệt yêu cầu và thêm vào nhóm chat thành công!', data });
     } catch (error) {
         console.error('Lỗi khi duyệt yêu cầu:', error);
+        if (error.message.includes('không có quyền')) {
+            return res.status(403).json({ message: error.message });
+        }
         res.status(500).json({ message: error.message || 'Lỗi Server' });
     }
 });
@@ -84,10 +88,14 @@ const approveActivityRequest = asyncHandler(async (req, res) => {
 const rejectActivityRequest = asyncHandler(async (req, res) => {
     try {
         const requestId = parseInt(req.params.id);
-        const data = await activityService.rejectActivityRequest(requestId);
+        const userId = req.user.user_id;
+        const data = await activityService.rejectActivityRequest(requestId, userId);
         res.json({ message: 'Đã từ chối yêu cầu.', data });
     } catch (error) {
         console.error('Lỗi khi từ chối yêu cầu:', error);
+        if (error.message.includes('không có quyền')) {
+            return res.status(403).json({ message: error.message });
+        }
         res.status(500).json({ message: error.message || 'Lỗi Server' });
     }
 });
