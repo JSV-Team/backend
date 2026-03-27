@@ -9,8 +9,11 @@ const getPendingApprovals = async (userId) => {
     return await activityModel.getRequestsToApprove(userId);
 };
 
-const deleteActivityRequest = async (requestId) => {
-    await activityModel.deleteActivityRequest(requestId);
+const deleteActivityRequest = async (requestId, userId) => {
+    const success = await activityModel.deleteActivityRequest(requestId, userId);
+    if (!success) {
+        throw new Error('Yêu cầu không tồn tại hoặc bạn không có quyền hủy yêu cầu này');
+    }
 };
 
 const getApprovedActivities = async (page = 1, limit = 15) => {

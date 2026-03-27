@@ -150,6 +150,10 @@ const canMessageActivityHost = async (activityId, userId) => {
     return true;
 };
 
+const isMemberOf = async (conversationId, userId) => {
+    return await chatModel.checkMembership(conversationId, userId);
+};
+
 const getConversationMembers = async (conversationId) => {
     return await chatModel.getConversationMembers(conversationId);
 };

@@ -45,10 +45,19 @@ const getRequestsToApprove = async (userId) => {
   return result.rows;
 };
 
-const deleteActivityRequest = async (requestId) => {
+const deleteActivityRequest = async (requestId, userId) => {
   const pool = getPool();
-  const query = `DELETE FROM activity_requests WHERE request_id = $1`;
-  await pool.query(query, [requestId]);
+  const query = `
+    DELETE FROM activity_requests 
+    WHERE request_id = $1 
+    AND (
+      requester_id = $2 
+      OR activity_id IN (SELECT activity_id FROM activities WHERE creator_id = $2)
+    )
+    RETURNING request_id;
+  `;
+  const result = await pool.query(query, [requestId, userId]);
+  return result.rowCount > 0;
 };
 
 const getApprovedActivities = async (page = 1, limit = 15) => {

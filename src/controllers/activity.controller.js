@@ -26,7 +26,8 @@ const getPendingApprovals = asyncHandler(async (req, res) => {
 const deleteActivityRequest = asyncHandler(async (req, res) => {
     try {
         const requestId = parseInt(req.params.id);
-        await activityService.deleteActivityRequest(requestId);
+        const userId = req.user.user_id;
+        await activityService.deleteActivityRequest(requestId, userId);
         res.json({ message: 'Đã hủy yêu cầu tham gia thành công!' });
     } catch (error) {
         console.error('Lỗi khi hủy yêu cầu:', error);

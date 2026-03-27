@@ -55,10 +55,16 @@ const setupSocket = (server) => {
         // Tham gia vào các room của cuộc hội thoại
         socket.on('join_rooms', async (conversationIds) => {
             if (Array.isArray(conversationIds)) {
-                conversationIds.forEach(id => {
-                    socket.join(`room_${id}`);
-                    console.log(`User ${socket.userId} joined room_${id}`);
-                });
+                for (const id of conversationIds) {
+                    // Check membership before joining
+                    const isMember = await chatService.isMemberOf(id, socket.userId);
+                    if (isMember) {
+                        socket.join(`room_${id}`);
+                        console.log(`User ${socket.userId} joined room_${id}`);
+                    } else {
+                        console.warn(`❌ User ${socket.userId} attempted to join unauthorized room_${id}`);
+                    }
+                }
             }
         });
 
