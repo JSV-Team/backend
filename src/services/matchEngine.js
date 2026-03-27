@@ -39,7 +39,9 @@ class MatchingEngine {
         user1Data.latitude,
         user1Data.longitude,
         user2Data.latitude,
-        user2Data.longitude
+        user2Data.longitude,
+        user1Data.location,
+        user2Data.location
       );
       
       // Calculate wait time bonus

@@ -2,6 +2,7 @@ const { pool } = require('../config/db');
 const interestService = require('./interestService');
 const numerologyService = require('./numerologyService');
 const { calculateDistance } = require('../utils/distanceCalculator');
+const locationUtils = require('../utils/locationUtils');
 
 /**
  * MatchingService - Service nâng cấp với Phễu 4 Tầng
@@ -65,9 +66,11 @@ async function getCandidateUsers(currentUserId) {
  * @param {number} lon1 - Kinh độ user 1
  * @param {number} lat2 - Vĩ độ user 2
  * @param {number} lon2 - Kinh độ user 2
+ * @param {string} loc1 - Vị trí user 1 (địa chỉ/thành phố)
+ * @param {string} loc2 - Vị trí user 2 (địa chỉ/thành phố)
  * @returns {Promise<Object>} - Kết quả matching với điểm số chi tiết và khoảng cách
  */
-async function calculateTotalMatchScore(userId1, userId2, dob1, dob2, lat1, lon1, lat2, lon2) {
+async function calculateTotalMatchScore(userId1, userId2, dob1, dob2, lat1, lon1, lat2, lon2, loc1, loc2) {
   console.log(`\n🧮 [MatchingService] Calculating total match score`);
   console.log(`   User ${userId1} <-> User ${userId2}`);
   
@@ -106,13 +109,9 @@ async function calculateTotalMatchScore(userId1, userId2, dob1, dob2, lat1, lon1
   
   // Tính điểm thần số học
   const rawNumerologyScore = numerologyService.calculateNumerologyScore(lifePathNum1, lifePathNum2);
-  // Quy đổi về thang điểm 20 (original is 30)
-  const numerologyScore = (rawNumerologyScore / 30) * 20;
-  console.log(`   🌟 Numerology Score: ${numerologyScore.toFixed(2)}/20 (raw: ${rawNumerologyScore}/30)`);
-  
-  // ===== TÍNH KHOẢNG CÁCH ĐỊA LÝ =====
-  const distance = calculateDistance(lat1, lon1, lat2, lon2);
-  console.log(`\n   📍 Distance: ${distance !== null ? distance + ' km' : 'Unknown'}`);
+  // Điểm thần số học chỉ chiếm 30%, quy đổi về thang điểm 30
+  const numerologyScore = (rawNumerologyScore / 30) * 30;
+  console.log(`   🌟 Numerology Score: ${numerologyScore.toFixed(2)}/30 (raw: ${rawNumerologyScore}/30)`);
   
   // ===== TỔNG KẾT =====
   const totalScore = distanceScore + interestScore + numerologyScore;
@@ -207,7 +206,9 @@ async function findBestMatchForUser(currentUserId) {
       currentUser.latitude,
       currentUser.longitude,
       candidate.latitude,
-      candidate.longitude
+      candidate.longitude,
+      currentUser.location,
+      candidate.location
     );
     
     matchResults.push({

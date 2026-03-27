@@ -47,7 +47,10 @@ async function testMatching() {
     const directScore = await matchingService.calculateTotalMatchScore(
       2, 7,
       '1995-03-22', // DOB của User 2
-      '1994-12-01'  // DOB của User 7
+      '1994-12-01', // DOB của User 7
+      21.0285, 105.8542, // Hà Nội
+      21.0285, 105.8542, // Hà Nội (giả định)
+      'Hà Nội', 'Hà Nội'
     );
     
     console.log('\n✅ KẾT QUẢ:');

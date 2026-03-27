@@ -89,7 +89,7 @@ async function calculateScoreHandler(req, res) {
     // Lấy thông tin cả 2 user
     const { pool } = require('../config/db');
     const usersQuery = await pool.query(
-      'SELECT user_id, username, full_name, location, dob FROM users WHERE user_id IN ($1, $2)',
+      'SELECT user_id, username, full_name, location, dob, latitude, longitude FROM users WHERE user_id IN ($1, $2)',
       [currentUserId, targetUserId]
     );
     
@@ -108,7 +108,13 @@ async function calculateScoreHandler(req, res) {
       currentUserId,
       targetUserId,
       currentUser.dob,
-      targetUser.dob
+      targetUser.dob,
+      currentUser.latitude,
+      currentUser.longitude,
+      targetUser.latitude,
+      targetUser.longitude,
+      currentUser.location,
+      targetUser.location
     );
     
     return res.json({
@@ -239,7 +245,7 @@ async function calculateBatchScores(currentUserId, targetUserIds) {
   
   // Lấy thông tin user hiện tại
   const currentUserQuery = await pool.query(
-    'SELECT user_id, dob FROM users WHERE user_id = $1',
+    'SELECT user_id, dob, location, latitude, longitude FROM users WHERE user_id = $1',
     [currentUserId]
   );
   
@@ -251,7 +257,7 @@ async function calculateBatchScores(currentUserId, targetUserIds) {
   
   // Lấy thông tin các target user
   const targetUsersQuery = await pool.query(
-    'SELECT user_id, username, full_name, avatar_url, dob FROM users WHERE user_id = ANY($1)',
+    'SELECT user_id, username, full_name, avatar_url, dob, location, latitude, longitude FROM users WHERE user_id = ANY($1)',
     [targetUserIds]
   );
   
@@ -263,7 +269,13 @@ async function calculateBatchScores(currentUserId, targetUserIds) {
       currentUserId,
       targetUser.user_id,
       currentUser.dob,
-      targetUser.dob
+      targetUser.dob,
+      currentUser.latitude,
+      currentUser.longitude,
+      targetUser.latitude,
+      targetUser.longitude,
+      currentUser.location,
+      targetUser.location
     );
     
     results.push({
