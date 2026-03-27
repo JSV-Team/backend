@@ -30,12 +30,10 @@ class MatchingEngine {
       const user1Data = await this._getUserFullData(user1);
       const user2Data = await this._getUserFullData(user2);
       
-      // Tính điểm theo Phễu 3 Tầng
+      // Tính điểm theo Phễu 4 Tầng (Distance + Interest + Numerology)
       const enhancedResult = await matchingService.calculateTotalMatchScore(
-        user1Data.userId,
-        user2Data.userId,
-        user1Data.dob,
-        user2Data.dob
+        user1Data,
+        user2Data
       );
       
       // Calculate wait time bonus
@@ -53,14 +51,11 @@ class MatchingEngine {
         user1Id: user1.userId,
         user2Id: user2.userId,
         score: Math.round(totalScore * 100) / 100,
-        interestScore: enhancedResult.interestScore,
-        numerologyScore: enhancedResult.numerologyScore,
+        distanceScore: enhancedResult.breakdown.distance.score,
+        interestScore: enhancedResult.breakdown.interest.score,
+        numerologyScore: enhancedResult.breakdown.numerology.score,
         waitTimeBonus: Math.round(waitTimeBonus * 100) / 100,
         commonInterests: enhancedResult.commonInterests,
-        lifePathNumbers: {
-          user1: enhancedResult.lifePathNum1,
-          user2: enhancedResult.lifePathNum2
-        },
         breakdown: enhancedResult.breakdown,
         matchingType: 'enhanced' // Đánh dấu là enhanced matching
       };
@@ -140,7 +135,7 @@ class MatchingEngine {
     
     // Query database để lấy thông tin đầy đủ
     const result = await pool.query(
-      'SELECT user_id, username, location, dob FROM users WHERE user_id = $1',
+      'SELECT user_id, username, location, dob, latitude, longitude FROM users WHERE user_id = $1',
       [user.userId]
     );
     
@@ -152,7 +147,9 @@ class MatchingEngine {
       ...user,
       userId: result.rows[0].user_id,
       location: result.rows[0].location,
-      dob: result.rows[0].dob
+      dob: result.rows[0].dob,
+      latitude: result.rows[0].latitude,
+      longitude: result.rows[0].longitude
     };
   }
 
