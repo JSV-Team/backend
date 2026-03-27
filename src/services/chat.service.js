@@ -70,11 +70,35 @@ const initOrJoinActivityChat = async (activityId, hostId, memberId) => {
     // Có thể tự động bắn tin "memberId đã join"...
 };
 
-const getOrInitPrivateConversation = async (user1, user2) => {
-    if (user1 === user2) throw new Error('Không thể tự chat với chính mình');
+const matchService = require('./matchService');
+
+const getOrInitPrivateConversation = async (user1, user2, activityId = null) => {
+    if (user1 === user2) throw new Error('Không thể tự chat with chính mình');
+    
     let conv = await chatModel.getPrivateConversation(user1, user2);
 
     if (!conv) {
+        // --- AUTHORIZATION CHECK ---
+        if (activityId) {
+            // Check if caller is Host
+            const hostId = await activityModel.getActivityHostId(activityId);
+            if (user1 !== hostId) {
+                throw new Error('Chỉ chủ hoạt động mới có thể bắt đầu cuộc trò chuyện');
+            }
+            // Check if partner is accepted
+            const requestStatus = await activityModel.checkActivityRequestStatus(activityId, user2);
+            if (!requestStatus || requestStatus.status !== 'accepted') {
+                throw new Error('Người dùng này chưa được duyệt tham gia hoạt động');
+            }
+        } else {
+            // Check for Match
+            const isMatched = await matchService.checkMatchExists(user1, user2);
+            if (!isMatched) {
+                throw new Error('Bạn cần được ghép đôi thành công mới có thể nhắn tin');
+            }
+        }
+        // --- END AUTHORIZATION CHECK ---
+
         const convId = await chatModel.createConversation('private', null);
         await chatModel.addMember(convId, user1, 'member');
         await chatModel.addMember(convId, user2, 'member');
