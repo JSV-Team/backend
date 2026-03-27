@@ -143,9 +143,9 @@ async function runMatchingCycle() {
     // ===== BƯỚC 2: TÌM MATCH TRÊN TOÀN BỘ QUEUE (ƯU TIÊN KHOẢNG CÁCH) =====
     console.log(`\n🔍 Finding best match among all ${usersForMatching.length} users in queue...`);
     
-    let bestPair = null;
-    let highestScore = -1;
-
+    // Tạo danh sách các cặp hợp lệ (chưa match với nhau)
+    const validPairs = [];
+    
     for (let i = 0; i < usersForMatching.length; i++) {
       for (let j = i + 1; j < usersForMatching.length; j++) {
         const user1 = usersForMatching[i];
@@ -155,7 +155,8 @@ async function runMatchingCycle() {
           console.log(`   🚫 Skipping pair User ${user1.userId} <-> User ${user2.userId} (already matched)`);
           continue;
         }
-
+        
+        validPairs.push([user1, user2]);
       }
     }
 
