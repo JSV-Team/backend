@@ -168,5 +168,6 @@ module.exports = {
     getOrInitPrivateConversation,
     canMessageActivityHost,
     markConversationAsRead,
-    getTotalUnreadCount
+    getTotalUnreadCount,
+    isMemberOf
 };
