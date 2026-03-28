@@ -107,6 +107,25 @@ const rejectActivityRequest = async (requestId, userId) => {
     return requestData;
 };
 
+const createActivity = async (activityData) => {
+    const { images, interestIds, ...rest } = activityData;
+    
+    // 1. Create activity record
+    const activityId = await activityModel.createActivity(rest);
+    
+    // 2. Save images connection
+    if (images && images.length > 0) {
+        await activityModel.saveActivityImages(activityId, images);
+    }
+    
+    // 3. Save interests/tags
+    if (interestIds && interestIds.length > 0) {
+        await activityModel.saveActivityTags(activityId, interestIds);
+    }
+    
+    return activityId;
+};
+
 const getActivitiesByUserId = async (userId) => {
     return await activityModel.getUserActivities(userId);
 };
@@ -120,5 +139,6 @@ module.exports = {
     rejectActivityRequest,
     getPendingApprovals,
     deleteActivity,
-    getActivitiesByUserId
+    getActivitiesByUserId,
+    createActivity
 };

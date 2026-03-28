@@ -172,6 +172,7 @@ CREATE TABLE match_sessions (
     -- pending | active | rejected | ended
     status       VARCHAR(20) NOT NULL DEFAULT 'pending',
     created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    match_score  INT         NOT NULL DEFAULT 0,
 
     CONSTRAINT uq_match           UNIQUE (user_one, user_two),
     CONSTRAINT chk_match_order    CHECK  (user_one < user_two),

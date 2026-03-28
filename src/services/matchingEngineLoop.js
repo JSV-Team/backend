@@ -60,16 +60,13 @@ async function runMatchingCycle() {
     // Get users from queue
     const queueInfo = queueService.getQueueInfo();
 
-    console.log(`\n🔄 ========== MATCHING CYCLE START ==========`);
-    console.log(`📊 Queue size: ${queueInfo.data?.size || 0}`);
-
-    const users = queueInfo.data.users; // Define users here
-
-    if (!queueInfo.success || users.length < 2) {
-      console.log(`⏭️  Skipping cycle - not enough users (need at least 1 more, current: ${users.length})`);
+    if (!queueInfo.success || !queueInfo.data || !queueInfo.data.users || queueInfo.data.users.length < 2) {
+      console.log(`⏭️  Skipping cycle - not enough users (need at least 2)`);
       console.log(`🔄 ========== MATCHING CYCLE END ==========\n`);
-      return; // Not enough users to match
+      return; 
     }
+
+    const users = queueInfo.data.users; 
 
     console.log(`\n👥 Users in queue (${users.length}):`);
     users.forEach(u => console.log(`   - User ${u.userId}${u.username ? ` (${u.username})` : ''} at ${u.location || 'Unknown'}`));
