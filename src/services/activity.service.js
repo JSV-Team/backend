@@ -130,6 +130,10 @@ const getActivitiesByUserId = async (userId) => {
     return await activityModel.getUserActivities(userId);
 };
 
+const updateActivity = async (activityId, userId, data) => {
+    return await activityModel.updateActivity(activityId, userId, data);
+};
+
 module.exports = {
     getPendingActivities,
     deleteActivityRequest,
@@ -140,5 +144,6 @@ module.exports = {
     getPendingApprovals,
     deleteActivity,
     getActivitiesByUserId,
-    createActivity
+    createActivity,
+    updateActivity
 };

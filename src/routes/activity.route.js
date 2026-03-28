@@ -49,7 +49,15 @@ router.get('/user/:userId', activityController.getActivitiesByUserId);
 // =============================================
 // DELETE /api/activities/:id (Protected)
 // =============================================
+// =============================================
+// DELETE /api/activities/:id (Protected)
+// =============================================
 router.delete('/:id', verifyToken, activityController.deleteActivity);
+
+// =============================================
+// PUT /api/activities/:id (Protected)
+// =============================================
+router.put('/:id', verifyToken, activityController.updateActivity);
 
 router.get('/test-route', (req, res) => res.json({ message: 'Route is active' }));
 

@@ -157,6 +157,20 @@ const deleteActivity = async (activityId, userId) => {
   return result.rows[0];
 };
 
+const updateActivity = async (activityId, userId, data) => {
+  const pool = getPool();
+  const { title, description, location, max_participants, duration_minutes } = data;
+  const query = `
+    UPDATE activities
+    SET title = $1, description = $2, location = $3, max_participants = $4, duration_minutes = $5, created_at = NOW()
+    WHERE activity_id = $6 AND creator_id = $7 AND status != 'deleted'
+    RETURNING activity_id
+  `;
+  const values = [title, description, location, max_participants, duration_minutes, activityId, userId];
+  const result = await pool.query(query, values);
+  return result.rows[0];
+};
+
 const rejectActivityRequest = async (requestId, userId) => {
   const pool = getPool();
   const query = `
@@ -324,5 +338,6 @@ module.exports = {
   createActivity,
   saveActivityImages,
   saveActivityTags,
-  getSharedAcceptedActivity
+  getSharedAcceptedActivity,
+  updateActivity
 };

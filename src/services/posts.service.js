@@ -211,6 +211,61 @@ exports.deleteStatus = async (statusId, userId) => {
   return { ok: true };
 };
 
+exports.updateStatus = async (statusId, userId, payload) => {
+  const pool = getPool();
+  const { content, image_url } = payload;
+  const query = `
+    UPDATE daily_status
+    SET content = $1, image_url = $2
+    WHERE status_id = $3 AND user_id = $4
+    RETURNING status_id
+  `;
+  const r = await pool.query(query, [content, image_url, statusId, userId]);
+  return r.rows[0];
+};
+
+exports.getPostByIdAndType = async (postId, type) => {
+  const pool = getPool();
+  if (type === 'status') {
+    const query = `
+      SELECT 
+        s.status_id AS id, 
+        s.user_id, 
+        s.content, 
+        s.image_url, 
+        s.created_at, 
+        'status' AS type,
+        u.username,
+        u.full_name
+      FROM daily_status s
+      JOIN users u ON u.user_id = s.user_id
+      WHERE s.status_id = $1
+    `;
+    const r = await pool.query(query, [postId]);
+    return r.rows[0];
+  } else {
+    const query = `
+      SELECT 
+        a.activity_id AS id, 
+        a.creator_id AS user_id, 
+        a.title, 
+        a.description AS desc, 
+        a.location, 
+        a.max_participants, 
+        a.duration_minutes, 
+        a.created_at, 
+        'activity' AS type,
+        u.username,
+        u.full_name
+      FROM activities a
+      JOIN users u ON u.user_id = a.creator_id
+      WHERE a.activity_id = $1
+    `;
+    const r = await pool.query(query, [postId]);
+    return r.rows[0];
+  }
+};
+
 /**
  * Lấy detail post (stats)
  */

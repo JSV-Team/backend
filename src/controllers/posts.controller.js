@@ -113,3 +113,20 @@ exports.deleteStatus = async (req, res, next) => {
     res.json(await s.deleteStatus(statusId, userId));
   } catch (e) { next(e); }
 };
+
+exports.updateStatus = async (req, res, next) => {
+  try {
+    const { statusId } = req.params;
+    const userId = req.user.user_id;
+    res.json(await s.updateStatus(statusId, userId, req.body));
+  } catch (e) { next(e); }
+};
+
+exports.getPostByIdAndType = async (req, res, next) => {
+  try {
+    const { postId, type } = req.params;
+    const result = await s.getPostByIdAndType(Number(postId), type);
+    if (!result) return res.status(404).json({ message: "Không tìm thấy bài viết" });
+    res.json(result);
+  } catch (e) { next(e); }
+};

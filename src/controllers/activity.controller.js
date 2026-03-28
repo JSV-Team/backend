@@ -139,6 +139,23 @@ const createActivity = asyncHandler(async (req, res) => {
     }
 });
 
+const updateActivity = asyncHandler(async (req, res) => {
+    try {
+        const activityId = parseInt(req.params.id);
+        const userId = req.user.user_id;
+        const data = req.body;
+
+        const result = await activityService.updateActivity(activityId, userId, data);
+        if (!result) {
+            return res.status(404).json({ message: 'Không tìm thấy hoạt động hoặc bạn không có quyền chỉnh sửa' });
+        }
+        res.json({ message: 'Cập nhật hoạt động thành công', activity_id: activityId });
+    } catch (error) {
+        console.error('Lỗi khi cập nhật hoạt động:', error);
+        res.status(500).json({ message: 'Lỗi Server' });
+    }
+});
+
 const getActivitiesByUserId = asyncHandler(async (req, res) => {
     try {
         const identifier = req.params.userId || req.params.id;
@@ -165,5 +182,6 @@ module.exports = {
     getPendingApprovals,
     deleteActivity,
     createActivity,
-    getActivitiesByUserId
+    getActivitiesByUserId,
+    updateActivity
 };
