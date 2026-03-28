@@ -1,7 +1,0 @@
-﻿[dotenv@17.3.1] injecting env (8) from .env -- tip: ΓÜÖ∩╕Å  write to custom object with { processEnv: myObject }
-[DEBUG DB CONFIG]
-DB_USER provided: Yes
-DB_HOST provided: Yes
-DATABASE_URL provided: No
-Γ£à PostgreSQL connected
-[{"content":"mini","image_url":"/uploads/post-1774332047397-747445035.png"},{"content":"mns","image_url":"/uploads/post-1774177274094-562728394.jpg"},{"content":"abc","image_url":"/uploads/post-1774170905230-346484856.jpg"},{"content":"dds","image_url":"/uploads/post-1774162965994-908724069.jpg"},{"content":"muon an BBQ","image_url":"/uploads/post-1774162449569-612962971.jpg"}]
