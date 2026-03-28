@@ -280,6 +280,32 @@ const saveActivityTags = async (activityId, interestIds) => {
   }
 };
 
+/**
+ * Checks if two users share an accepted activity (one is creator, other is accepted participant OR both are accepted participants)
+ */
+const getSharedAcceptedActivity = async (user1, user2) => {
+  const pool = getPool();
+  // Case 1: user1 host, user2 guest
+  // Case 2: user2 host, user1 guest
+  // Case 3: both guest in same activity
+  const query = `
+    SELECT activity_id FROM (
+      SELECT activity_id FROM activities 
+      WHERE creator_id = $1 AND activity_id IN (SELECT activity_id FROM activity_requests WHERE requester_id = $2 AND status = 'accepted')
+      UNION
+      SELECT activity_id FROM activities 
+      WHERE creator_id = $2 AND activity_id IN (SELECT activity_id FROM activity_requests WHERE requester_id = $1 AND status = 'accepted')
+      UNION
+      SELECT r1.activity_id FROM activity_requests r1
+      JOIN activity_requests r2 ON r1.activity_id = r2.activity_id
+      WHERE r1.requester_id = $1 AND r1.status = 'accepted'
+        AND r2.requester_id = $2 AND r2.status = 'accepted'
+    ) AS shared_activities LIMIT 1;
+  `;
+  const result = await pool.query(query, [user1, user2]);
+  return result.rows[0];
+};
+
 module.exports = {
   getPendingActivities,
   deleteActivityRequest,
@@ -297,6 +323,6 @@ module.exports = {
   getUserActivities,
   createActivity,
   saveActivityImages,
-  saveActivityTags
+  saveActivityTags,
   getSharedAcceptedActivity
 };
