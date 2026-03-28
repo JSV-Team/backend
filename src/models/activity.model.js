@@ -298,4 +298,5 @@ module.exports = {
   createActivity,
   saveActivityImages,
   saveActivityTags
+  getSharedAcceptedActivity
 };

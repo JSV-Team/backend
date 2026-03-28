@@ -1,4 +1,5 @@
 const s = require("../services/posts.service");
+const profileService = require("../services/profile.service");
 
 exports.listAll = async (req, res, next) => {
   try {
@@ -10,9 +11,14 @@ exports.listAll = async (req, res, next) => {
 
 exports.listByUser = async (req, res, next) => {
   try {
-    const userId = Number(req.params.userId);
+    const identifier = req.params.userId;
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 15;
+
+    // Resolve identifier to actual user_id
+    const profile = await profileService.getProfile(identifier);
+    const userId = profile.user_id;
+
     res.json(await s.listByUser(userId, page, limit));
   } catch (e) { next(e); }
 };

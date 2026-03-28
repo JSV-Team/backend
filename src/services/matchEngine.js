@@ -16,24 +16,32 @@ class MatchingEngine {
 
   /**
    * Calculate match score between two users
-   * NÂNG CẤP: Sử dụng matchingService với Phễu 3 Tầng
-   * @param {Object} user1 - First user object (phải có userId, location, dob)
-   * @param {Object} user2 - Second user object (phải có userId, location, dob)
+   * NÂNG CẤP: Sử dụng matchingService với Phễu 3 Tầng (bao gồm distance)
+   * @param {Object} user1 - First user object (phải có userId, location, dob, latitude, longitude)
+   * @param {Object} user2 - Second user object (phải có userId, location, dob, latitude, longitude)
    * @returns {Promise<Object>} - Match result with score and details
    */
   async calculateMatchScore(user1, user2) {
     // Nếu bật Enhanced Matching, sử dụng Phễu 3 Tầng
     if (this.useEnhancedMatching) {
-      console.log(`\n🚀 [MatchEngine] Using ENHANCED matching (3-Tier Funnel)`);
+      console.log(`\n🚀 [MatchEngine] Using ENHANCED matching (3-Tier Funnel with Distance)`);
       
       // Lấy thông tin đầy đủ của user từ database nếu thiếu
       const user1Data = await this._getUserFullData(user1);
       const user2Data = await this._getUserFullData(user2);
       
-      // Tính điểm theo Phễu 4 Tầng (Distance + Interest + Numerology)
+      // Tính điểm theo Phễu 3 Tầng (bao gồm distance)
       const enhancedResult = await matchingService.calculateTotalMatchScore(
-        user1Data,
-        user2Data
+        user1Data.userId,
+        user2Data.userId,
+        user1Data.dob,
+        user2Data.dob,
+        user1Data.latitude,
+        user1Data.longitude,
+        user2Data.latitude,
+        user2Data.longitude,
+        user1Data.location,
+        user2Data.location
       );
       
       // Calculate wait time bonus
@@ -51,9 +59,9 @@ class MatchingEngine {
         user1Id: user1.userId,
         user2Id: user2.userId,
         score: Math.round(totalScore * 100) / 100,
-        distanceScore: enhancedResult.breakdown.distance.score,
-        interestScore: enhancedResult.breakdown.interest.score,
-        numerologyScore: enhancedResult.breakdown.numerology.score,
+        interestScore: enhancedResult.interestScore,
+        numerologyScore: enhancedResult.numerologyScore,
+        distance: enhancedResult.distance,
         waitTimeBonus: Math.round(waitTimeBonus * 100) / 100,
         commonInterests: enhancedResult.commonInterests,
         breakdown: enhancedResult.breakdown,
@@ -129,7 +137,7 @@ class MatchingEngine {
    */
   async _getUserFullData(user) {
     // Nếu đã có đủ thông tin, return luôn
-    if (user.dob && user.location) {
+    if (user.dob && user.location && user.latitude !== undefined && user.longitude !== undefined) {
       return user;
     }
     
@@ -208,13 +216,27 @@ class MatchingEngine {
       return null;
     }
 
-    // Sort by score (descending), then by wait time (descending)
+    // Sort by score (descending), then by distance (ascending - closer is better), then by wait time (descending)
     validPairs.sort((a, b) => {
       // First by score
       if (b.score !== a.score) {
         return b.score - a.score;
       }
-      // Then by wait time bonus (users waiting longer get priority)
+      // Then by distance (closer is better) - only for enhanced matching
+      if (a.matchingType === 'enhanced' && b.matchingType === 'enhanced') {
+        // Handle null distances (put them at the end)
+        if (a.distance === null && b.distance === null) {
+          return b.waitTimeBonus - a.waitTimeBonus;
+        }
+        if (a.distance === null) return 1;
+        if (b.distance === null) return -1;
+        
+        // If distances are different, prioritize closer
+        if (a.distance !== b.distance) {
+          return a.distance - b.distance;
+        }
+      }
+      // Finally by wait time bonus (users waiting longer get priority)
       return b.waitTimeBonus - a.waitTimeBonus;
     });
 

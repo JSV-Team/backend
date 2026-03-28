@@ -22,6 +22,7 @@ exports.listAll = async (page = 1, limit = 15) => {
       (SELECT json_agg(image_url ORDER BY sort_order) FROM activity_images WHERE activity_id = a.activity_id) AS images,
       'activity' AS post_type,
       u.full_name, 
+      u.username,
       u.avatar_url,
       u.username,
       0 AS reactions_count,
@@ -59,6 +60,7 @@ exports.listByUser = async (userId, page = 1, limit = 15) => {
             s.image_url,
             'status' AS post_type,
             u.full_name, 
+            u.username,
             u.avatar_url,
             u.username,
             0 AS reactions_count,
@@ -262,7 +264,7 @@ exports.react = async (postId, userId, emoji) => {
 exports.reactors = async (postId) => {
   const pool = getPool();
   const query = `
-      SELECT u.user_id, u.full_name, u.email, u.avatar_url, pr.emoji, pr.created_at
+      SELECT u.user_id, u.username, u.full_name, u.email, u.avatar_url, pr.emoji, pr.created_at
       FROM post_reactions pr
       JOIN users u ON u.user_id = pr.user_id
       WHERE pr.post_id = $1
@@ -288,7 +290,7 @@ exports.comments = async (postId) => {
   const pool = getPool();
   const query = `
       SELECT c.comment_id, c.content, c.created_at,
-             u.user_id, u.full_name, u.avatar_url
+             u.user_id, u.username, u.full_name, u.avatar_url
       FROM post_comments c
       JOIN users u ON u.user_id = c.user_id
       WHERE c.post_id = $1
@@ -301,7 +303,7 @@ exports.comments = async (postId) => {
 exports.commenters = async (postId) => {
   const pool = getPool();
   const query = `
-      SELECT DISTINCT u.user_id, u.full_name, u.email, u.avatar_url
+      SELECT DISTINCT u.user_id, u.username, u.full_name, u.email, u.avatar_url
       FROM post_comments c
       JOIN users u ON u.user_id = c.user_id
       WHERE c.post_id = $1
@@ -324,7 +326,7 @@ exports.share = async (postId, userId) => {
 exports.sharers = async (postId) => {
   const pool = getPool();
   const query = `
-      SELECT u.user_id, u.full_name, u.email, u.avatar_url, ps.created_at
+      SELECT u.user_id, u.username, u.full_name, u.email, u.avatar_url, ps.created_at
       FROM post_shares ps
       JOIN users u ON u.user_id = ps.user_id
       WHERE ps.post_id = $1

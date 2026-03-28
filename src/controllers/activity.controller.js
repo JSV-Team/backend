@@ -1,5 +1,6 @@
 const asyncHandler = require('express-async-handler');
 const activityService = require('../services/activity.service');
+const profileService = require('../services/profile.service');
 
 const getPendingActivities = asyncHandler(async (req, res) => {
     try {
@@ -140,12 +141,17 @@ const createActivity = asyncHandler(async (req, res) => {
 
 const getActivitiesByUserId = asyncHandler(async (req, res) => {
     try {
-        const userId = parseInt(req.params.userId || req.params.id);
+        const identifier = req.params.userId || req.params.id;
+        
+        // Resolve either ID or Username to numeric user_id
+        const profile = await profileService.getProfile(identifier);
+        const userId = profile.user_id;
+
         const result = await activityService.getActivitiesByUserId(userId);
         res.json(result);
     } catch (error) {
         console.error('Lỗi khi lấy hoạt động của user:', error);
-        res.status(500).json({ message: 'Lỗi Server' });
+        res.status(500).json({ message: 'Lỗi Server: ' + error.message });
     }
 });
 

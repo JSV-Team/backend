@@ -80,21 +80,35 @@ const getOrInitPrivateConversation = async (user1, user2, activityId = null) => 
     if (!conv) {
         // --- AUTHORIZATION CHECK ---
         if (activityId) {
-            // Check if caller is Host
             const hostId = await activityModel.getActivityHostId(activityId);
-            if (user1 !== hostId) {
-                throw new Error('Chỉ chủ hoạt động mới có thể bắt đầu cuộc trò chuyện');
+            const isUser1Host = Number(user1) === Number(hostId);
+            const isUser2Host = Number(user2) === Number(hostId);
+
+            if (!isUser1Host && !isUser2Host) {
+                throw new Error('Cuộc trò chuyện này phải liên quan đến chủ hoạt động');
             }
-            // Check if partner is accepted
-            const requestStatus = await activityModel.checkActivityRequestStatus(activityId, user2);
+
+            const participantId = isUser1Host ? user2 : user1;
+            const requestStatus = await activityModel.checkActivityRequestStatus(activityId, participantId);
+            
             if (!requestStatus || requestStatus.status !== 'accepted') {
-                throw new Error('Người dùng này chưa được duyệt tham gia hoạt động');
+                throw new Error('Cần được duyệt tham gia hoạt động mới có thể nhắn tin');
             }
         } else {
-            // Check for Match
+            // Check for Match OR Following
             const isMatched = await matchService.checkMatchExists(user1, user2);
             if (!isMatched) {
-                throw new Error('Bạn cần được ghép đôi thành công mới có thể nhắn tin');
+                // If not matched, allow chat if there is a follow relationship
+                const profileService = require('./profile.service');
+                const follows = await profileService.isFollowing(user1, user2);
+                
+                if (!follows) {
+                    // Kiểm tra xem có chung hoạt động nào đã được duyệt chưa
+                    const sharedActivity = await activityModel.getSharedAcceptedActivity(user1, user2);
+                    if (!sharedActivity) {
+                        throw new Error('Bạn cần được ghép đôi thành công hoặc theo dõi người này mới có thể nhắn tin');
+                    }
+                }
             }
         }
         // --- END AUTHORIZATION CHECK ---
