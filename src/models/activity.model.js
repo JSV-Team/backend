@@ -229,6 +229,24 @@ const getUserActivities = async (userId) => {
   return result.rows;
 };
 
+// Kiểm tra xem hai user có chung hoạt động nào đã được accepted chưa
+const getSharedAcceptedActivity = async (user1, user2) => {
+  const pool = getPool();
+  const query = `
+    SELECT a.activity_id 
+    FROM activities a
+    JOIN activity_requests ar ON a.activity_id = ar.activity_id
+    WHERE (
+        (a.creator_id = $1 AND ar.requester_id = $2 AND ar.status = 'accepted')
+        OR
+        (a.creator_id = $2 AND ar.requester_id = $1 AND ar.status = 'accepted')
+    )
+    LIMIT 1
+  `;
+  const result = await pool.query(query, [user1, user2]);
+  return result.rows[0] || null;
+};
+
 module.exports = {
   getPendingActivities,
   deleteActivityRequest,
@@ -243,5 +261,6 @@ module.exports = {
   deleteActivity,
   checkActivityRequestStatus,
   getActivityHostId,
-  getUserActivities
+  getUserActivities,
+  getSharedAcceptedActivity
 };

@@ -61,7 +61,7 @@ const getOrInitPrivateChat = asyncHandler(async (req, res) => {
     }
 
     try {
-        const conv = await chatService.getOrInitPrivateConversation(userId, partnerId);
+        const conv = await chatService.getOrInitPrivateConversation(userId, partnerId, activityId);
         res.json(conv);
     } catch (error) {
         res.status(400).json({ message: error.message });
