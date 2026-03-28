@@ -21,25 +21,20 @@ async function validateUser(userId) {
   if (!userInfo) {
     return {
       valid: false,
-      error: 'Người dùng không tồn tại',
+      error: 'Người dùng không tồn tại hoặc đã bị khóa',
       errorCode: 'USER_NOT_FOUND'
     };
   }
 
-  // Check if user is active (not banned)
-  // The getUserInfo query already filters by status = 'active'
-  // If userInfo is null, it means user is not active (banned/inactive)
-  // Note: We need to check the actual status field from users table
-
-  // Get user status from database
+  // Get user status, location, and dob from database
   const { getPool } = require('../config/db');
   const pool = getPool();
-  const statusQuery = await pool.query(
-    'SELECT status FROM users WHERE user_id = $1',
+  const userDataQuery = await pool.query(
+    'SELECT status, location, dob FROM users WHERE user_id = $1',
     [userId]
   );
 
-  if (statusQuery.rows.length === 0) {
+  if (userDataQuery.rows.length === 0) {
     return {
       valid: false,
       error: 'Người dùng không tồn tại',
@@ -47,8 +42,10 @@ async function validateUser(userId) {
     };
   }
 
-  const userStatus = statusQuery.rows[0].status;
-  if (userStatus !== 'active') {
+  const { status, location, dob } = userDataQuery.rows[0];
+
+  // 1. Check if user is active (not banned)
+  if (status !== 'active') {
     return {
       valid: false,
       error: 'Tài khoản của bạn đã bị khóa',
@@ -56,7 +53,25 @@ async function validateUser(userId) {
     };
   }
 
-  // Check if user has at least 1 interest
+  // 2. Check if user has location
+  if (!location || location.trim() === '') {
+    return {
+      valid: false,
+      error: 'Vui lòng cập nhật địa điểm trong hồ sơ trước khi ghép đôi',
+      errorCode: 'MISSING_LOCATION'
+    };
+  }
+
+  // 3. Check if user has date of birth
+  if (!dob) {
+    return {
+      valid: false,
+      error: 'Vui lòng cập nhật ngày sinh trong hồ sơ trước khi ghép đôi',
+      errorCode: 'MISSING_DOB'
+    };
+  }
+
+  // 4. Check if user has at least 1 interest
   const interests = await interestService.getUserInterests(userId);
   console.log(`🔍 validateUser(${userId}): Checking interests...`);
   console.log(`   Interests found: ${interests ? interests.length : 0}`);
